@@ -1,0 +1,25 @@
+services:
+  lego-inventory:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lego-inventory
+    restart: on-failure
+
+    ports:
+      - "5000:5000"
+
+    volumes:
+      # Persist config.ini and generated Sets.xlsx outside the container
+      - ./config.ini:/app/config.ini
+      - ./output:/app/output
+
+    environment:
+      - PYTHONUNBUFFERED=1
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
