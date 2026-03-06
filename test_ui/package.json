@@ -1,0 +1,15 @@
+{
+  "name": "lego-inventory-ui-tests",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "jest --verbose"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "testMatch": ["**/test_ui.js"]
+  },
+  "devDependencies": {
+    "jest": "^29.0.0",
+    "jest-environment-jsdom": "^29.0.0"
+  }
+}

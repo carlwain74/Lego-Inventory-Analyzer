@@ -1,0 +1,20 @@
+[run]
+source = .
+omit =
+    tests/*
+    test_ui/*
+    conftest.py
+    */site-packages/*
+    */node_modules/*
+    setup.py
+    generate_sheets.py
+    inventory*.py
+
+[report]
+show_missing = True
+skip_covered = False
+precision = 0
+
+[html]
+directory = coverage_html
+title = Lego Inventory Coverage Report
