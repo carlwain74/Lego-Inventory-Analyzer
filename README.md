@@ -14,6 +14,7 @@ A local web application for analysing Bricklink marketplace pricing data across 
 - [Local Network Access](#local-network-access)
 - [How to Test](#how-to-test)
 - [How to Contribute](#how-to-contribute)
+- [Docker](#docker)
 
 ---
 
@@ -49,20 +50,24 @@ Lego Inventory connects to the [Bricklink](https://www.bricklink.com) marketplac
 ```
 .
 ├── app.py                  # Flask application and API routes
-├── generate_sheets.py      # Bricklink API integration and sheet generation
-├── last_sale_date.py       # Utility: find most recent sale from unordered list
+├── generate_sheets.py      # Bricklink API integration, sheet generation and sale date utility
+├── config.ini.template     # Credentials template (committed)
 ├── config.ini              # Bricklink API credentials (not committed to git)
 ├── Pipfile                 # Python dependencies
 ├── Pipfile.lock
-├── package.json            # JS test dependencies (Jest)
-├── conftest.py             # pytest shared fixtures and stubs
 ├── .coveragerc             # Coverage configuration
 ├── run_tests.sh            # Wrapper script to run all test suites
+├── Dockerfile              # Container image definition
+├── docker-compose.yml      # Docker Compose service configuration
+├── .dockerignore           # Files excluded from the Docker build context
 ├── templates/
 │   └── index.html          # Single-page frontend
 ├── tests/
+│   ├── __init__.py
+│   ├── conftest.py         # pytest shared fixtures and stubs
 │   └── test_app.py         # pytest suite for Flask routes
 └── test_ui/
+    ├── package.json        # JS test dependencies (Jest)
     └── test_ui.js          # Jest suite for frontend JS functions
 ```
 
@@ -87,15 +92,13 @@ pipenv install
 
 ### 2. Configure Bricklink API credentials
 
-Either use the in-app settings dialog (see [Configuration](#configuration)) or create `config.ini` manually in the project root:
+Copy the provided template and fill in your credentials:
 
-```ini
-[secrets]
-consumer_key = YOUR_CONSUMER_KEY
-consumer_secret = YOUR_CONSUMER_SECRET
-token_value = YOUR_TOKEN_VALUE
-token_secret = YOUR_TOKEN_SECRET
+```bash
+cp config.ini.template config.ini
 ```
+
+Then open `config.ini` and fill in your credentials, or use the in-app settings dialog (see [Configuration](#configuration)).
 
 ### 3. Start the server
 
@@ -315,6 +318,65 @@ Then open a Pull Request against the `main` branch on GitHub. In the PR descript
 ### 7. Code review
 
 PRs require at least one approving review before merging. Address any feedback with additional commits on the same branch — do not force-push after a review has started.
+
+---
+
+## Docker
+
+The app can be run in a container using Docker Compose. The container will automatically restart if the app crashes (`restart: on-failure`).
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (includes Docker Compose)
+
+### 1. Create a config.ini
+
+The container expects `config.ini` to exist in the project root before starting — it is mounted as a volume rather than baked into the image so credentials are never embedded in the image layer.
+
+Copy the template and fill in your credentials:
+
+```bash
+cp config.ini.template config.ini
+```
+
+### 2. Build and start
+
+```bash
+docker compose up --build
+```
+
+The app will be available at **http://localhost:5000**.
+
+To run in the background:
+
+```bash
+docker compose up --build -d
+```
+
+### 3. Stop the container
+
+```bash
+docker compose down
+```
+
+### Generated files
+
+`Sets.xlsx` is written to an `output/` directory that is mounted as a volume, so generated files persist between container restarts and are accessible on your host machine.
+
+### Rebuilding after code changes
+
+```bash
+docker compose up --build
+```
+
+Docker will only rebuild layers that have changed. Dependency installation is cached as a separate layer so it is only re-run when `Pipfile` or `Pipfile.lock` changes.
+
+### Notes
+
+- The container runs **gunicorn** (2 workers, 120s timeout) rather than Flask's built-in dev server for better stability
+- `config.ini` and `output/` are mounted as volumes and are never baked into the image
+- Dev dependencies (`pytest`, `pytest-cov`) are excluded from the image — only production packages are installed
+
 
 ---
 

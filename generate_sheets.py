@@ -82,7 +82,7 @@ def getDetails(session, set_number):
         past_sales = session.catalog_item.get_price_guide(item_type, set_number, new_or_used="N", \
                                                           guide_type="sold", country_code="US", region="north_america")
     except Exception as e:
-        logging.exception("Failed to get price guide for item" + str(e))
+        logging.exception(f"Failed to get price guide for item [{set_number}] {str(e)}")
         return {}
 
     logging.debug(json.dumps(current_items, indent=4, sort_keys=True))
@@ -276,7 +276,8 @@ def generate_single_sheet(session, file_handler, workbook, worksheet):
         number = line.strip()
         res = getDetails(session, number)
         if not res:
-            sys.exit(1)
+            logging.warning(f"Could not get set info for {number}")
+            continue
         for key in res:
             print_details(res[key], key)
             logging.debug(json.dumps(res, indent=4, sort_keys=True))
@@ -322,6 +323,7 @@ def generate_multi_sheet(session, file_handler, workbook):
         res = getDetails(session, number)
         if not res:
             logging.error('Could not get details for set:' +number)
+            continue
         for key in res:
             worksheet = add_worksheet(workbook, key)
             # Find next available row on column B

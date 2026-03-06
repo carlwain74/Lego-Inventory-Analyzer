@@ -1,0 +1,31 @@
+services:
+  lego-inventory:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lego-inventory
+    restart: on-failure
+
+    ports:
+      - "5000:5000"
+
+    volumes:
+      # Bind mount — maps local config.ini into the container at runtime
+      # credentials are never baked into the image
+      - ./config.ini:/app/config.ini:ro
+      # Named volume — persists generated Sets.xlsx across container restarts
+      - output:/app/output
+
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OUTPUT_DIR=/app/output
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  output:
