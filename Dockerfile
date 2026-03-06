@@ -18,7 +18,7 @@ COPY Pipfile Pipfile.lock ./
 RUN pipenv install --system --ignore-pipfile 2>/dev/null || pipenv install --system
 
 # Copy application source
-COPY app.py generate_sheets.py last_sale_date.py ./
+COPY app.py generate_sheets.py ./
 COPY templates/ templates/
 
 # Expose Flask port
