@@ -65,7 +65,7 @@ def generate():
             if not re.match(r'^\d+-\d+$', set_number):
                 return jsonify({'error': 'Invalid set number format. Use XXXXX-1 (e.g. 75192-1)'}), 400
 
-            output = capture_output(sheet_handler, set_num=set_number, set_list=None, multi_sheet=False)
+            output = capture_output(sheet_handler, set_num=set_number, set_list=None, multi_sheet=False, output_dir=OUTPUT_DIR)
 
         elif mode == 'file':
             uploaded_file = request.files.get('set_file')
@@ -80,7 +80,7 @@ def generate():
                 uploaded_file.save(tmp)
 
             try:
-                output = capture_output(sheet_handler, set_num=None, set_list=tmp_path, multi_sheet=multi_sheet)
+                output = capture_output(sheet_handler, set_num=None, set_list=tmp_path, multi_sheet=multi_sheet, output_dir=OUTPUT_DIR)
             finally:
                 os.unlink(tmp_path)
 
@@ -98,6 +98,11 @@ def generate():
 
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'config.ini')
+
+# Output directory — defaults to the project root but can be overridden
+# via the OUTPUT_DIR env var (used by Docker to write into the mounted volume)
+OUTPUT_DIR = os.environ.get('OUTPUT_DIR', os.path.dirname(__file__))
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
 @app.route('/settings', methods=['GET'])
@@ -193,7 +198,7 @@ def save_settings():
 def download():
     """Serve the generated output file for download.
     sheet_handler writes to Sets.xlsx in the working directory by default."""
-    output_path = os.path.join(os.path.dirname(__file__), 'Sets.xlsx')
+    output_path = os.path.join(OUTPUT_DIR, 'Sets.xlsx')
     if not os.path.exists(output_path):
         return jsonify({'error': 'Output file not found. Generate a sheet first.'}), 404
     return send_file(
