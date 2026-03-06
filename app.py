@@ -65,7 +65,9 @@ def generate():
             if not re.match(r'^\d+-\d+$', set_number):
                 return jsonify({'error': 'Invalid set number format. Use XXXXX-1 (e.g. 75192-1)'}), 400
 
-            output = capture_output(sheet_handler, set_num=set_number, set_list=None, multi_sheet=False, output_dir=OUTPUT_DIR)
+            output = capture_output(sheet_handler, set_num=set_number, set_list=None, multi_sheet=False,
+                                       output_file=os.path.join(OUTPUT_DIR, 'Sets.xlsx'),
+                                       config_file=CONFIG_PATH)
 
         elif mode == 'file':
             uploaded_file = request.files.get('set_file')
@@ -80,7 +82,9 @@ def generate():
                 uploaded_file.save(tmp)
 
             try:
-                output = capture_output(sheet_handler, set_num=None, set_list=tmp_path, multi_sheet=multi_sheet, output_dir=OUTPUT_DIR)
+                output = capture_output(sheet_handler, set_num=None, set_list=tmp_path, multi_sheet=multi_sheet,
+                                       output_file=os.path.join(OUTPUT_DIR, 'Sets.xlsx'),
+                                       config_file=CONFIG_PATH)
             finally:
                 os.unlink(tmp_path)
 
