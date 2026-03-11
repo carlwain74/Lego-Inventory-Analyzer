@@ -147,14 +147,14 @@ Create workbook
 def create_wookbook(xls_filename):
     try:
         if os.path.isfile(xls_filename) and os.access(xls_filename, os.R_OK):
-            logging.info('Load excel file')
+            logging.info(f'Load excel file: {xls_filename}')
             workbook = load_workbook(filename=xls_filename)
         else:
             workbook = Workbook()
             logging.info(workbook.sheetnames)
             workbook.remove(workbook['Sheet'])
     except Exception as exception:
-        logging.error('Could not load excel file!' + str(exception))
+        logging.error(f'Could not load excel file: {xls_filename} -  {str(exception)}')
         sys.exit(1)
 
     return workbook
@@ -268,17 +268,18 @@ def generate_single_sheet(session, file_handler, workbook, worksheet):
     total = 0
     _row = 1
     _col = 1
+    sets = {}
     while True:
         line = file_handler.readline()
         if not line:
             break
-        #print(line.strip())
         number = line.strip()
         res = getDetails(session, number)
         if not res:
             logging.warning(f"Could not get set info for {number}")
             continue
         for key in res:
+            sets[key] = res[key]
             print_details(res[key], key)
             logging.debug(json.dumps(res, indent=4, sort_keys=True))
             total += res[key]['current']['avg']
@@ -303,6 +304,7 @@ def generate_single_sheet(session, file_handler, workbook, worksheet):
             data.alignment = Alignment(horizontal="center", vertical="center")
 
     logging.info("Total: " + str(total) + "USD")
+    return sets
 
 def generate_multi_sheet(session, file_handler, workbook):
 
@@ -397,6 +399,17 @@ def test_config(config_file = 'config.ini'):
     else:
         return False
 
+
+def set_parser(session, set, set_list):
+    """
+        Function to get the details of a set and return a JSON structure.
+        The function can receive either a single set identifier or a file with two or more set identifiers.
+
+    """
+
+    #if set:
+    pass
+
 """
 The main handler routine.
 """
@@ -420,6 +433,9 @@ def sheet_handler(set_num, set_list, multi_sheet, output_file = 'Sets.xlsx', con
         logging.debug(json.dumps(res, indent=4, sort_keys=True))
         for key in res:
             print_details(res[key], key)
+            sets = { key : res[key]}
+            logging.info(sets)
+            return sets
     elif set_list:
         xls_filename = output_file
 
@@ -444,9 +460,12 @@ def sheet_handler(set_num, set_list, multi_sheet, output_file = 'Sets.xlsx', con
                 if multi_sheet:
                     generate_multi_sheet(session, file_handler, workbook)
                 else:
-                    generate_single_sheet(session, file_handler, workbook, worksheet)
+                    sets = generate_single_sheet(session, file_handler, workbook, worksheet)
 
             workbook.save(filename=xls_filename)
+
+            logging.info(sets)
+            return sets
 
 if __name__ == '__main__':
     sheet_handler("71016-1", "", False, False)

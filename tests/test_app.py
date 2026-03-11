@@ -2,8 +2,8 @@
 tests/test_app.py — pytest suite for app.py
 
 Run from the project root:
-    pip install pytest flask
-    pytest tests/test_app.py -v
+    pipenv sync --dev
+    pipenv run pytest tests/test_app.py -v
 
 generate_sheets is stubbed in conftest.py so no real Bricklink credentials
 are needed.
@@ -13,13 +13,24 @@ import io
 import os
 import configparser
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import app as flask_app
 
-# Grab the stub that conftest registered
 import sys
 _gs_stub = sys.modules['generate_sheets']
+
+SAMPLE_SET = {
+    '75192-1': {
+        'name': 'Millennium Falcon', 'category': 'Star Wars',
+        'current':  {'avg': 450, 'max': 800, 'min': 350, 'quantity': 5,  'currency': 'USD'},
+        'past':     {'avg': 400, 'max': 750, 'min': 300, 'quantity': 12, 'currency': 'USD',
+                     'last_sale_date': '2024-06-15T10:00:00.000Z'},
+        'year': 2017,
+        'image':     '//img.bricklink.com/SL/75192-1.jpg',
+        'thumbnail': '//img.bricklink.com/S/75192-1.jpg',
+    }
+}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -29,6 +40,7 @@ _gs_stub = sys.modules['generate_sheets']
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(flask_app, 'CONFIG_PATH', str(tmp_path / 'config.ini'))
+    monkeypatch.setattr(flask_app, 'OUTPUT_DIR',  str(tmp_path))
     flask_app.app.config['TESTING'] = True
     with flask_app.app.test_client() as c:
         yield c
@@ -44,7 +56,8 @@ def config_path(tmp_path, monkeypatch):
 @pytest.fixture(autouse=True)
 def reset_gs_stub():
     _gs_stub.sheet_handler.reset_mock()
-    _gs_stub.sheet_handler.side_effect = None
+    _gs_stub.sheet_handler.return_value = SAMPLE_SET
+    _gs_stub.sheet_handler.side_effect  = None
     _gs_stub.test_config.reset_mock()
     _gs_stub.test_config.return_value = True
     _gs_stub.test_config.side_effect  = None
@@ -67,42 +80,6 @@ class TestIndex:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# capture_output
-# ═══════════════════════════════════════════════════════════════════════════════
-
-class TestCaptureOutput:
-    def test_captures_info_log_messages(self):
-        import logging
-        output = flask_app.capture_output(lambda: logging.getLogger().info('hello'))
-        assert 'hello' in output
-
-    def test_does_not_capture_debug_messages(self):
-        import logging
-        output = flask_app.capture_output(lambda: (
-            logging.getLogger().debug('hidden'),
-            logging.getLogger().info('shown'),
-        ))
-        assert 'hidden' not in output
-        assert 'shown'  in output
-
-    def test_restores_logger_level_after_call(self):
-        import logging
-        before = logging.getLogger().level
-        flask_app.capture_output(lambda: None)
-        assert logging.getLogger().level == before
-
-    def test_restores_handlers_on_exception(self):
-        import logging
-        before = list(logging.getLogger().handlers)
-        with pytest.raises(RuntimeError):
-            flask_app.capture_output(lambda: (_ for _ in ()).throw(RuntimeError('boom')))
-        assert logging.getLogger().handlers == before
-
-    def test_returns_empty_string_for_no_output(self):
-        assert flask_app.capture_output(lambda: None) == ''
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # POST /generate — set mode
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -121,28 +98,38 @@ class TestGenerateSetMode:
 
     @pytest.mark.parametrize('good', ['75192-1', '1-1', '123456-2', '10698-1'])
     def test_valid_format_returns_200(self, client, good):
-        with patch.object(flask_app, 'capture_output', return_value='Item: ' + good):
-            assert self._post(client, good).status_code == 200
+        _gs_stub.sheet_handler.return_value = {good: {'name': 'Test'}}
+        assert self._post(client, good).status_code == 200
 
-    def test_output_returned_in_response(self, client):
-        with patch.object(flask_app, 'capture_output', return_value='Item: 75192-1\nName: Falcon'):
-            r = self._post(client, '75192-1')
-        assert 'Item: 75192-1' in r.get_json()['output']
+    def test_sets_returned_directly_in_response(self, client):
+        _gs_stub.sheet_handler.return_value = SAMPLE_SET
+        r = self._post(client, '75192-1')
+        assert r.get_json() == SAMPLE_SET
 
-    def test_empty_output_returns_placeholder(self, client):
-        with patch.object(flask_app, 'capture_output', return_value=''):
-            r = self._post(client, '75192-1')
-        assert r.get_json()['output'] == '(No output returned)'
+    def test_empty_result_returns_500(self, client):
+        _gs_stub.sheet_handler.return_value = {}
+        r = self._post(client, '75192-1')
+        assert r.status_code == 500
+        assert 'error' in r.get_json()
 
-    def test_exception_returns_error_json(self, client):
-        with patch.object(flask_app, 'capture_output', side_effect=RuntimeError('API down')):
-            r = self._post(client, '75192-1')
+    def test_exception_returns_500_with_error(self, client):
+        _gs_stub.sheet_handler.side_effect = RuntimeError('API down')
+        r = self._post(client, '75192-1')
+        assert r.status_code == 500
         assert 'API down' in r.get_json()['error']
 
-    def test_set_number_passed_to_capture_output(self, client):
-        with patch.object(flask_app, 'capture_output', return_value='ok') as mock_cap:
-            self._post(client, '75192-1')
-        assert mock_cap.call_args[1]['set_num'] == '75192-1'
+    def test_set_number_passed_to_sheet_handler(self, client):
+        self._post(client, '75192-1')
+        assert _gs_stub.sheet_handler.call_args[1]['set_num'] == '75192-1'
+
+    def test_output_file_path_uses_output_dir(self, client, tmp_path):
+        self._post(client, '75192-1')
+        call_output_file = _gs_stub.sheet_handler.call_args[1]['output_file']
+        assert call_output_file == os.path.join(str(tmp_path), 'Sets.xlsx')
+
+    def test_config_path_passed_to_sheet_handler(self, client, tmp_path):
+        self._post(client, '75192-1')
+        assert _gs_stub.sheet_handler.call_args[1]['config_file'] == str(tmp_path / 'config.ini')
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -161,39 +148,36 @@ class TestGenerateFileMode:
         assert client.post('/generate', data={'mode': 'file'}).status_code == 400
 
     def test_valid_upload_returns_200(self, client):
-        with patch.object(flask_app, 'capture_output', return_value='Item: 75192-1\n'):
-            assert self._post(client).status_code == 200
+        assert self._post(client).status_code == 200
+
+    def test_result_returned_directly_in_response(self, client):
+        assert self._post(client).get_json() == SAMPLE_SET
 
     def test_multi_sheet_true_forwarded(self, client):
-        captured = {}
-        def spy(fn, **kw): captured.update(kw); return 'ok'
-        with patch.object(flask_app, 'capture_output', side_effect=spy):
-            self._post(client, multi_sheet='true')
-        assert captured['multi_sheet'] is True
+        self._post(client, multi_sheet='true')
+        assert _gs_stub.sheet_handler.call_args[1]['multi_sheet'] is True
 
     def test_multi_sheet_false_forwarded(self, client):
-        captured = {}
-        def spy(fn, **kw): captured.update(kw); return 'ok'
-        with patch.object(flask_app, 'capture_output', side_effect=spy):
-            self._post(client, multi_sheet='false')
-        assert captured['multi_sheet'] is False
+        self._post(client, multi_sheet='false')
+        assert _gs_stub.sheet_handler.call_args[1]['multi_sheet'] is False
 
     def test_temp_file_deleted_after_success(self, client):
         paths = []
-        def spy(fn, **kw):
+        def spy(**kw):
             if kw.get('set_list'): paths.append(kw['set_list'])
-            return 'ok'
-        with patch.object(flask_app, 'capture_output', side_effect=spy):
-            self._post(client)
+            return SAMPLE_SET
+        _gs_stub.sheet_handler.side_effect = spy
+        self._post(client)
         assert paths and not any(os.path.exists(p) for p in paths)
 
     def test_temp_file_deleted_after_exception(self, client):
         paths = []
-        def spy(fn, **kw):
+        def spy(**kw):
             if kw.get('set_list'): paths.append(kw['set_list'])
             raise RuntimeError('crash')
-        with patch.object(flask_app, 'capture_output', side_effect=spy):
-            self._post(client)
+        _gs_stub.sheet_handler.side_effect = spy
+        r = self._post(client)
+        assert r.status_code == 500
         assert paths and not any(os.path.exists(p) for p in paths)
 
 
@@ -278,8 +262,14 @@ class TestSaveSettings:
         cfg.read(str(config_path))
         assert cfg['secrets']['consumer_key'] == 'real'
 
-    def test_no_body_returns_400(self, client):
-        assert client.post('/settings', data='', content_type='application/json').status_code == 400
+    def test_empty_json_body_returns_400(self, client):
+        # force=True+silent=True means Flask parses the body regardless of content-type;
+        # an empty body parses to None which triggers the 400 branch
+        assert client.post('/settings', data=b'', content_type='application/json').status_code == 400
+
+    def test_malformed_json_returns_400(self, client):
+        # Malformed JSON also silently returns None from get_json(force, silent)
+        assert client.post('/settings', data=b'{bad json', content_type='application/json').status_code == 400
 
     def test_creates_config_if_absent(self, client, config_path):
         assert not config_path.exists()
@@ -309,7 +299,6 @@ class TestTestConnection:
     def test_config_restored_after_success(self, client, config_path):
         original = '[secrets]\nconsumer_key = original_key\n'
         config_path.write_text(original)
-        _gs_stub.test_config.return_value = True
         client.post('/settings/test', json={'consumer_key': 'temp'})
         assert config_path.read_text() == original
 

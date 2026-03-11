@@ -1361,19 +1361,15 @@
       const response = await fetch('/generate', { method: 'POST', body: formData });
       const data     = await response.json();
 
-      if (data.error && !data.output) {
+      if (data.error) {
         showError('❌  ' + data.error);
-      } else if (data.output && !data.error) {
-        const sets = parseAllSets(data.output);
+      } else {
+        const sets = normaliseSets(data);
         if (sets.length === 0) {
-          showError('⚠️  Could not parse any set data from the output.\n\n' + data.output);
+          showError('⚠️  No set data returned.');
         } else {
           showSetCards(sets, mode === 'file');
         }
-      } else {
-        let text = data.error ? '⚠️  ' + data.error + '\n\n' : '';
-        text += data.output || '(No output)';
-        showError(text);
       }
     } catch (err) {
       showError('❌  Network error: ' + err.message);
@@ -1383,78 +1379,48 @@
   });
 
   /* ════════════════════════════════
-     PARSING
-     Splits raw log text into one
-     object per "Item: XXXXX-1" block
+     NORMALISE
+     Converts the JSON map returned
+     by sheet_handler into the flat
+     object shape the card renderer
+     expects.
   ════════════════════════════════ */
-  function parseAllSets(text) {
-    const sets  = [];
-    const chunks = text.split(/(?=^\s*Item:\s)/m).filter(c => c.trim());
+  function normaliseSets(setsMap) {
+    return Object.entries(setsMap).map(([number, s]) => {
+      const cur  = s.current || {};
+      const prev = s.past    || {};
+      const currency = cur.currency || prev.currency || '';
 
-    for (const chunk of chunks) {
-      const lines = chunk.split('\n');
-
-      // Top-level fields (outside any sub-section)
-      const top = {};
-      // Sub-section buckets
-      const sections = {};
-      let currentSection = null;
-
-      for (const line of lines) {
-        // Detect sub-section headers — exactly 2-space indent, no value after colon
-        const sectionMatch = line.match(/^( {2})(Current Sales|Previous Sales):\s*$/i);
-        if (sectionMatch) {
-          currentSection = sectionMatch[2].toLowerCase();
-          sections[currentSection] = {};
-          continue;
-        }
-        const m = line.match(/^(\s*)([^:]+):\s*(.+)$/);
-        if (!m) continue;
-        const indent = m[1].length;
-        const key    = m[2].trim().toLowerCase();
-        const val    = m[3].trim();
-        // Lines with <=2 spaces of indent are top-level — reset section context
-        if (indent <= 2) {
-          currentSection = null;
-          top[key] = val;
-        } else if (currentSection) {
-          sections[currentSection][key] = val;
-        } else {
-          top[key] = val;
-        }
+      function fmt(val) {
+        if (val == null) return '—';
+        return currency ? `${val} ${currency}` : String(val);
       }
 
-      if (!top['name'] && !top['item']) continue;
+      const cur_avg = fmt(cur.avg);
+      const cur_max = fmt(cur.max);
 
-      const cur  = sections['current sales']  || {};
-      const prev = sections['previous sales'] || {};
-
-      sets.push({
-        number:    top['item']          || '—',
-        name:      top['name']          || '—',
-        category:  top['category']      || '—',
-        year:      top['year released'] || top['year'] || '—',
-        thumbnail: top['thumbnail'] ? 'http:' + top['thumbnail'] : '',
-        image:     top['image']     ? 'http:' + top['image']     : '',
+      return {
+        number,
+        name:      s.name     || '—',
+        category:  s.category || '—',
+        year:      s.year     != null ? String(s.year) : '—',
+        thumbnail: s.thumbnail ? 'http:' + s.thumbnail : '',
+        image:     s.image     ? 'http:' + s.image     : '',
         // Current Sales
-        cur_avg: cur['average'] || cur['avg price'] || '—',
-        cur_max: cur['max']     || cur['max price'] || '—',
-        cur_min: cur['min']     || cur['min price'] || '—',
-        cur_qty: cur['quantity avail'] || cur['quantity available'] || cur['qty'] || '—',
+        cur_avg,
+        cur_max,
+        cur_min: fmt(cur.min),
+        cur_qty: cur.quantity != null ? String(cur.quantity) : '—',
         // Previous Sales
-        prev_avg: prev['average'] || prev['avg price'] || '—',
-        prev_max: prev['max']     || prev['max price'] || '—',
-        prev_min: prev['min']     || prev['min price'] || '—',
-        prev_qty:  prev['quantity avail'] || prev['quantity available'] || prev['qty'] || '—',
-        prev_date: formatSaleDate(prev['last sale date'] || prev['last sale'] || ''),
+        prev_avg: fmt(prev.avg),
+        prev_max: fmt(prev.max),
+        prev_min: fmt(prev.min),
+        prev_qty: prev.quantity != null ? String(prev.quantity) : '—',
+        prev_date: formatSaleDate(prev.last_sale_date || ''),
         // Derived
-        saleValue: calcSaleValue(
-          cur['average'] || cur['avg price'],
-          cur['max']     || cur['max price']
-        ),
-      });
-    }
-    return sets;
+        saleValue: calcSaleValue(cur_avg, cur_max),
+      };
+    });
   }
 
   /* ════════════════════════════════
