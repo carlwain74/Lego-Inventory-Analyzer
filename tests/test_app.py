@@ -5,7 +5,7 @@ Run from the project root:
     pipenv sync --dev
     pipenv run pytest tests/test_app.py -v
 
-generate_sheets is stubbed in conftest.py so no real Bricklink credentials
+set_handler is stubbed in conftest.py so no real Bricklink credentials
 are needed.
 """
 
@@ -18,7 +18,8 @@ from unittest.mock import patch
 import app as flask_app
 
 import sys
-_gs_stub = sys.modules['generate_sheets']
+_sh_stub      = sys.modules['set_handler']
+_sh_instance  = _sh_stub.SetHandler.return_value  # the mock SetHandler instance
 
 SAMPLE_SET = {
     '75192-1': {
@@ -54,13 +55,21 @@ def config_path(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def reset_gs_stub():
-    _gs_stub.sheet_handler.reset_mock()
-    _gs_stub.sheet_handler.return_value = SAMPLE_SET
-    _gs_stub.sheet_handler.side_effect  = None
-    _gs_stub.test_config.reset_mock()
-    _gs_stub.test_config.return_value = True
-    _gs_stub.test_config.side_effect  = None
+def reset_stubs():
+    # Reset SetHandler constructor — use return_value/side_effect args so child
+    # mocks are not wiped, then restore them explicitly below
+    _sh_stub.SetHandler.side_effect  = None
+    _sh_stub.SetHandler.return_value = _sh_instance
+
+    # Reset set_handler instance method
+    _sh_instance.set_handler.return_value = SAMPLE_SET
+    _sh_instance.set_handler.side_effect  = None
+
+    # Reset test_config instance method — must reset side_effect explicitly
+    # because reset_mock() does not clear side_effects on child mocks by default
+    _sh_instance.test_config.return_value = True
+    _sh_instance.test_config.side_effect  = None
+
     yield
 
 
@@ -98,38 +107,37 @@ class TestGenerateSetMode:
 
     @pytest.mark.parametrize('good', ['75192-1', '1-1', '123456-2', '10698-1'])
     def test_valid_format_returns_200(self, client, good):
-        _gs_stub.sheet_handler.return_value = {good: {'name': 'Test'}}
+        _sh_instance.set_handler.return_value = {good: {'name': 'Test'}}
         assert self._post(client, good).status_code == 200
 
     def test_sets_returned_directly_in_response(self, client):
-        _gs_stub.sheet_handler.return_value = SAMPLE_SET
+        _sh_instance.set_handler.return_value = SAMPLE_SET
         r = self._post(client, '75192-1')
         assert r.get_json() == SAMPLE_SET
 
     def test_empty_result_returns_500(self, client):
-        _gs_stub.sheet_handler.return_value = {}
+        _sh_instance.set_handler.return_value = {}
         r = self._post(client, '75192-1')
         assert r.status_code == 500
         assert 'error' in r.get_json()
 
     def test_exception_returns_500_with_error(self, client):
-        _gs_stub.sheet_handler.side_effect = RuntimeError('API down')
+        _sh_instance.set_handler.side_effect = RuntimeError('API down')
         r = self._post(client, '75192-1')
         assert r.status_code == 500
         assert 'API down' in r.get_json()['error']
 
-    def test_set_number_passed_to_sheet_handler(self, client):
+    def test_set_number_passed_to_SetHandler(self, client):
         self._post(client, '75192-1')
-        assert _gs_stub.sheet_handler.call_args[1]['set_num'] == '75192-1'
+        assert _sh_stub.SetHandler.call_args[1]['set_num'] == '75192-1'
 
     def test_output_file_path_uses_output_dir(self, client, tmp_path):
         self._post(client, '75192-1')
-        call_output_file = _gs_stub.sheet_handler.call_args[1]['output_file']
-        assert call_output_file == os.path.join(str(tmp_path), 'Sets.xlsx')
+        assert _sh_stub.SetHandler.call_args[1]['output_file'] == os.path.join(str(tmp_path), 'Sets.xlsx')
 
-    def test_config_path_passed_to_sheet_handler(self, client, tmp_path):
+    def test_config_path_passed_to_SetHandler(self, client, tmp_path):
         self._post(client, '75192-1')
-        assert _gs_stub.sheet_handler.call_args[1]['config_file'] == str(tmp_path / 'config.ini')
+        assert _sh_stub.SetHandler.call_args[1]['config_file'] == str(tmp_path / 'config.ini')
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -155,27 +163,29 @@ class TestGenerateFileMode:
 
     def test_multi_sheet_true_forwarded(self, client):
         self._post(client, multi_sheet='true')
-        assert _gs_stub.sheet_handler.call_args[1]['multi_sheet'] is True
+        assert _sh_stub.SetHandler.call_args[1]['multi_sheet'] is True
 
     def test_multi_sheet_false_forwarded(self, client):
         self._post(client, multi_sheet='false')
-        assert _gs_stub.sheet_handler.call_args[1]['multi_sheet'] is False
+        assert _sh_stub.SetHandler.call_args[1]['multi_sheet'] is False
 
     def test_temp_file_deleted_after_success(self, client):
         paths = []
         def spy(**kw):
-            if kw.get('set_list'): paths.append(kw['set_list'])
-            return SAMPLE_SET
-        _gs_stub.sheet_handler.side_effect = spy
+            path = kw.get('set_list')
+            if path: paths.append(path)
+            _sh_stub.SetHandler.return_value = _sh_instance
+        _sh_stub.SetHandler.side_effect = spy
         self._post(client)
         assert paths and not any(os.path.exists(p) for p in paths)
 
     def test_temp_file_deleted_after_exception(self, client):
         paths = []
         def spy(**kw):
-            if kw.get('set_list'): paths.append(kw['set_list'])
+            path = kw.get('set_list')
+            if path: paths.append(path)
             raise RuntimeError('crash')
-        _gs_stub.sheet_handler.side_effect = spy
+        _sh_stub.SetHandler.side_effect = spy
         r = self._post(client)
         assert r.status_code == 500
         assert paths and not any(os.path.exists(p) for p in paths)
@@ -283,15 +293,15 @@ class TestSaveSettings:
 
 class TestTestConnection:
     def test_ok_true_on_success(self, client):
-        _gs_stub.test_config.return_value = True
+        _sh_instance.test_config.return_value = True
         assert client.post('/settings/test', json={}).get_json()['ok'] is True
 
     def test_ok_false_on_failure(self, client):
-        _gs_stub.test_config.return_value = False
+        _sh_instance.test_config.return_value = False
         assert client.post('/settings/test', json={}).get_json()['ok'] is False
 
     def test_ok_false_and_error_message_on_exception(self, client):
-        _gs_stub.test_config.side_effect = Exception('timeout')
+        _sh_instance.test_config.side_effect = Exception('timeout')
         data = client.post('/settings/test', json={}).get_json()
         assert data['ok'] is False
         assert 'timeout' in data.get('error', '')
@@ -305,14 +315,14 @@ class TestTestConnection:
     def test_config_restored_after_failure(self, client, config_path):
         original = '[secrets]\nconsumer_key = original_key\n'
         config_path.write_text(original)
-        _gs_stub.test_config.return_value = False
+        _sh_instance.test_config.return_value = False
         client.post('/settings/test', json={'consumer_key': 'temp'})
         assert config_path.read_text() == original
 
     def test_config_restored_after_exception(self, client, config_path):
         original = '[secrets]\nconsumer_key = original_key\n'
         config_path.write_text(original)
-        _gs_stub.test_config.side_effect = Exception('crash')
+        _sh_instance.test_config.side_effect = Exception('crash')
         client.post('/settings/test', json={'consumer_key': 'temp'})
         assert config_path.read_text() == original
 
@@ -329,7 +339,7 @@ class TestTestConnection:
             cfg.read(str(config_path))
             seen.append(dict(cfg['secrets']))
             return True
-        _gs_stub.test_config.side_effect = capture
+        _sh_instance.test_config.side_effect = capture
         client.post('/settings/test', json={'consumer_secret': 'new_secret'})
         assert seen[0]['consumer_secret'] == 'new_secret'
         assert seen[0]['consumer_key']    == 'existing'

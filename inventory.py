@@ -1,10 +1,10 @@
-from generate_sheets import sheet_handler
+from set_handler import SetHandler
 import argparse
 import logging
 
 logging.basicConfig(
 format='%(asctime)s %(levelname)-8s %(message)s',
-level=logging.DEBUG,
+level=logging.INFO,
 datefmt='%Y-%m-%d %H:%M:%S')
 
 def main():
@@ -24,9 +24,11 @@ def main():
 	multi_sheet = args.multi
 
 	try:
-		sheet_handler(set_num, set_list, multi_sheet, output_file)
+		set_instance = SetHandler(set_num, set_list, multi_sheet, output_file)
+		sets = set_instance.set_handler()
+		logging.info(sets)
 	except Exception as e:
-		logging.exception("Failed to call sheet_handler" + str(e))
+		logging.exception("Failed to call sheet_handler: " + str(e))
 
 if __name__ == '__main__':
     main()
