@@ -9,6 +9,7 @@ omit =
     setup.py
     generate_sheets.py
     inventory*.py
+    bricklink_py*
 
 [report]
 show_missing = True

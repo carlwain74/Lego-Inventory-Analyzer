@@ -1,47 +1,16 @@
-import io
 import os
 import re
-import logging
 import tempfile
 import configparser
 from flask import Flask, render_template, request, jsonify, send_file
 
-# Import the sheet_handler from the generate_sheets module
-from generate_sheets import sheet_handler, test_config
+from set_handler import SetHandler
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max upload
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
-
-def capture_output(fn, *args, **kwargs):
-    """
-    Call fn(*args, **kwargs) and capture all logging output.
-    Attaches a temporary StreamHandler to the root logger so that
-    any logger.info/warning/error calls inside sheet_handler (or
-    any module it imports) are written into a StringIO buffer.
-    """
-    buf = io.StringIO()
-
-    # Clean format - just the message text, no timestamps or level prefix
-    handler = logging.StreamHandler(buf)
-    handler.setLevel(logging.INFO)
-    handler.setFormatter(logging.Formatter('%(message)s'))
-
-    root_logger = logging.getLogger()
-    original_level = root_logger.level
-    root_logger.addHandler(handler)
-    root_logger.setLevel(logging.INFO)
-
-    try:
-        fn(*args, **kwargs)
-    finally:
-        root_logger.removeHandler(handler)
-        root_logger.setLevel(original_level)
-        handler.close()
-
-    return buf.getvalue()
 
 
 @app.route('/')
@@ -52,8 +21,6 @@ def index():
 @app.route('/generate', methods=['POST'])
 def generate():
     mode = request.form.get('mode')  # 'set' or 'file'
-    error = None
-    output = ''
 
     try:
         if mode == 'set':
@@ -65,9 +32,10 @@ def generate():
             if not re.match(r'^\d+-\d+$', set_number):
                 return jsonify({'error': 'Invalid set number format. Use XXXXX-1 (e.g. 75192-1)'}), 400
 
-            output = capture_output(sheet_handler, set_num=set_number, set_list=None, multi_sheet=False,
-                                       output_file=os.path.join(OUTPUT_DIR, 'Sets.xlsx'),
-                                       config_file=CONFIG_PATH)
+            handler = SetHandler(set_num=set_number, set_list=None, multi_sheet=False,
+                                    output_file=os.path.join(OUTPUT_DIR, 'Sets.xlsx'),
+                                    config_file=CONFIG_PATH)
+            result = handler.set_handler()
 
         elif mode == 'file':
             uploaded_file = request.files.get('set_file')
@@ -82,9 +50,10 @@ def generate():
                 uploaded_file.save(tmp)
 
             try:
-                output = capture_output(sheet_handler, set_num=None, set_list=tmp_path, multi_sheet=multi_sheet,
-                                       output_file=os.path.join(OUTPUT_DIR, 'Sets.xlsx'),
-                                       config_file=CONFIG_PATH)
+                handler = SetHandler(set_num=None, set_list=tmp_path, multi_sheet=multi_sheet,
+                                        output_file=os.path.join(OUTPUT_DIR, 'Sets.xlsx'),
+                                        config_file=CONFIG_PATH)
+                result = handler.set_handler()
             finally:
                 os.unlink(tmp_path)
 
@@ -92,12 +61,12 @@ def generate():
             return jsonify({'error': 'Invalid mode selected.'}), 400
 
     except Exception as e:
-        error = str(e)
+        return jsonify({'error': str(e)}), 500
 
-    if error:
-        return jsonify({'error': error, 'output': output})
+    if not result:
+        return jsonify({'error': 'No data returned from sheet handler.'}), 500
 
-    return jsonify({'output': output or '(No output returned)'})
+    return jsonify(result)
 
 
 
@@ -126,11 +95,11 @@ def get_settings():
 @app.route('/settings/test', methods=['POST'])
 def test_connection():
     """
-    Write submitted credentials to a temporary config, run test_config(),
+    Write submitted credentials to a temporary config, run SetHandler.test_config(),
     then unconditionally restore the original config file.
     No backup files are left on disk after this call.
     """
-    data = request.get_json() or {}
+    data = request.get_json(force=True, silent=True) or {}
     allowed = ('consumer_key', 'consumer_secret', 'token_value', 'token_secret')
 
     # Read original config (may not exist yet)
@@ -157,7 +126,8 @@ def test_connection():
             config.write(f)
 
         # Run the test
-        result = test_config()
+        tester = SetHandler(config_file=CONFIG_PATH)
+        result = tester.test_config()
         return jsonify({'ok': bool(result)})
 
     except Exception as e:
@@ -174,7 +144,7 @@ def test_connection():
 @app.route('/settings', methods=['POST'])
 def save_settings():
     """Write any non-empty submitted credentials to config.ini in cleartext."""
-    data = request.get_json()
+    data = request.get_json(force=True, silent=True)
     if not data:
         return jsonify({'error': 'No data received'}), 400
 
@@ -200,8 +170,7 @@ def save_settings():
 
 @app.route('/download')
 def download():
-    """Serve the generated output file for download.
-    sheet_handler writes to Sets.xlsx in the working directory by default."""
+    """Serve the generated output file for download."""
     output_path = os.path.join(OUTPUT_DIR, 'Sets.xlsx')
     if not os.path.exists(output_path):
         return jsonify({'error': 'Output file not found. Generate a sheet first.'}), 404
@@ -213,5 +182,5 @@ def download():
     )
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     app.run(host='0.0.0.0', port=5000, debug=True)
