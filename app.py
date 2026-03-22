@@ -15,7 +15,7 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', version=APP_VERSION)
 
 
 @app.route('/generate', methods=['POST'])
@@ -70,7 +70,11 @@ def generate():
 
 
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'config.ini')
+CONFIG_PATH   = os.path.join(os.path.dirname(__file__), 'config.ini')
+VERSION_FILE  = os.path.join(os.path.dirname(__file__), 'VERSION')
+
+with open(VERSION_FILE) as _vf:
+    APP_VERSION = _vf.read().strip()
 
 # Output directory — defaults to the project root but can be overridden
 # via the OUTPUT_DIR env var (used by Docker to write into the mounted volume)

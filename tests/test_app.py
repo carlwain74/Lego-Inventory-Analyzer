@@ -42,6 +42,7 @@ SAMPLE_SET = {
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(flask_app, 'CONFIG_PATH', str(tmp_path / 'config.ini'))
     monkeypatch.setattr(flask_app, 'OUTPUT_DIR',  str(tmp_path))
+    monkeypatch.setattr(flask_app, 'APP_VERSION', '0.3.1')
     flask_app.app.config['TESTING'] = True
     with flask_app.app.test_client() as c:
         yield c
@@ -86,6 +87,9 @@ class TestIndex:
 
     def test_contains_app_title(self, client):
         assert b'Lego Inventory' in client.get('/').data
+
+    def test_renders_version_string(self, client):
+        assert b'0.3.1' in client.get('/').data
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
