@@ -32,3 +32,11 @@ _sh_instance.test_config = MagicMock(return_value=True)
 
 sys.modules['set_handler']     = _set_handler_stub
 sys.modules['generate_sheets'] = MagicMock()  # no longer used by app.py but may be imported elsewhere
+
+# Stub database so app.py test suite doesn't create real DB files
+_db_stub = MagicMock()
+sys.modules['database'] = _db_stub
+sys.modules['models']   = MagicMock()
+sys.modules['routes.inventory']    = MagicMock()
+sys.modules['routes.import_routes'] = MagicMock()
+_db_stub.init_db = MagicMock()

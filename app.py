@@ -5,6 +5,9 @@ import configparser
 from flask import Flask, render_template, request, jsonify, send_file
 
 from set_handler import SetHandler
+from database import init_db
+from routes.inventory import inventory_bp
+from routes.import_routes import import_bp
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max upload
@@ -80,6 +83,14 @@ with open(VERSION_FILE) as _vf:
 # via the OUTPUT_DIR env var (used by Docker to write into the mounted volume)
 OUTPUT_DIR = os.environ.get('OUTPUT_DIR', os.path.dirname(__file__))
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+os.environ.setdefault('CONFIG_PATH', CONFIG_PATH)
+os.environ.setdefault('OUTPUT_DIR',  OUTPUT_DIR)
+
+DB_PATH = os.path.join(OUTPUT_DIR, 'inventory.db')
+init_db(DB_PATH)
+
+app.register_blueprint(inventory_bp)
+app.register_blueprint(import_bp)
 
 
 @app.route('/settings', methods=['GET'])
