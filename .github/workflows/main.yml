@@ -28,15 +28,14 @@ jobs:
               issue_number: prNumber,
               body: body
             });
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: coverage check
+        uses: actions/setup-python@v5
         with: { python-version: 3.12}
       - name: Install & Test
         run: |
-          pip install pipenv && pipenv install --system
-          pip install pytest-cov
-          pytest --cov=./ --cov-report=xml --cov-fail-under=80
+            pip install pipenv && pipenv install --system
+            pip install pytest-cov
+            pytest --cov=./ --cov-report=xml --cov-fail-under=80
       - uses: MishaKav/pytest-coverage-comment@v1.1.51
         with: { pytest-xml-coverage-path: ./coverage.xml, title: "Python Coverage" }
 
