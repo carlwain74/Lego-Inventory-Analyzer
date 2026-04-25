@@ -37,7 +37,8 @@ jobs:
       - name: Install & Test
         run: |
             pip install pipenv
-            pipenv install --dev
+            pipenv sync --dev
+            which pytest
             pytest --cov=./ --cov-report=xml --cov-fail-under=80
       - uses: MishaKav/pytest-coverage-comment@v1.1.51
         with: { pytest-xml-coverage-path: ./coverage.xml, title: "Python Coverage" }
