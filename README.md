@@ -377,7 +377,6 @@ Docker will only rebuild layers that have changed. Dependency installation is ca
 - `config.ini` and `output/` are mounted as volumes and are never baked into the image
 - Dev dependencies (`pytest`, `pytest-cov`) are excluded from the image — only production packages are installed
 
-
 ---
 
 ## Licence
