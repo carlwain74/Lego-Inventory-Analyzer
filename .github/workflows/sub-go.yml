@@ -1,0 +1,19 @@
+on:
+  workflow_call:
+    inputs: { user: { required: true, type: string }, ver: { required: true, type: string } }
+    secrets: { token: { required: true } }
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: ${{ inputs.ver }} }
+      - env: { GOPROXY: "https://${{inputs.user}}:${{secrets.token}}@your-org.jfrog.io/artifactory/api/go/go" }
+        run: go test -v -coverprofile=coverage.out ./...
+      - name: Report
+        run: |
+          go install ://github.com
+          gocover-cobertura < coverage.out > coverage.xml
+      - uses: 5monkeys/cobertura-action@master
+        with: { path: coverage.xml, repo_token: ${{ secrets.GITHUB_TOKEN }}, minimum_coverage: 80, fail_below_threshold: true }
