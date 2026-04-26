@@ -35,13 +35,13 @@ jobs:
             echo "ver=${V:-3.10}" >> $GITHUB_OUTPUT
           fi
 
-  maven:
-    needs: initialize
-    if: needs.initialize.outputs.lang == 'maven'
-    uses: ./.github/workflows/sub-maven.yml
-    with: 
-      user: ${{ needs.initialize.outputs.user }}
-      ver: ${{ needs.initialize.outputs.ver }}
+  #maven:
+  #  needs: initialize
+  #  if: needs.initialize.outputs.lang == 'maven'
+  #  uses: ./.github/workflows/sub-maven.yml
+  #  with: 
+  #    user: ${{ needs.initialize.outputs.user }}
+  #    ver: ${{ needs.initialize.outputs.ver }}
 
   python:
     needs: initialize
@@ -51,11 +51,11 @@ jobs:
       user: ${{ needs.initialize.outputs.user }}
       ver: ${{ needs.initialize.outputs.ver }}
 
-  go:
-    needs: initialize
-    if: needs.initialize.outputs.lang == 'go'
-    uses: ./.github/workflows/sub-go.yml
-    with:
-      user: ${{ needs.initialize.outputs.user }}
-      ver: ${{ needs.initialize.outputs.ver }}
+  #go:
+  #  needs: initialize
+  #  if: needs.initialize.outputs.lang == 'go'
+  #  uses: ./.github/workflows/sub-go.yml
+  #  with:
+  #    user: ${{ needs.initialize.outputs.user }}
+  #    ver: ${{ needs.initialize.outputs.ver }}
 
