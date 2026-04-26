@@ -1,6 +1,11 @@
 # central-ops-repo/.github/workflows/dispatcher.yml
 name: CI Dispatcher
-on: workflow_call
+on:
+  push:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   initialize:
@@ -54,4 +59,3 @@ jobs:
       user: ${{ needs.initialize.outputs.user }}
       ver: ${{ needs.initialize.outputs.ver }}
 
-      
