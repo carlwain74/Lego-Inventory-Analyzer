@@ -18,4 +18,8 @@ jobs:
           go install ://github.com
           gocover-cobertura < coverage.out > coverage.xml
       - uses: 5monkeys/cobertura-action@master
-        with: { path: coverage.xml, repo_token: ${{ secrets.GITHUB_TOKEN }}, minimum_coverage: 80, fail_below_threshold: true }
+        with: 
+          path: coverage.xml
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          minimum_coverage: 80
+          fail_below_threshold: true }
