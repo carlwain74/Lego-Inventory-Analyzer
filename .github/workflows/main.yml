@@ -46,6 +46,7 @@ jobs:
 
   python:
     needs: initialize
+    if: needs.initialize.outputs.lang == 'python'
     runs-on: ubuntu-latest
     steps:
       - name: checkout code
@@ -53,7 +54,7 @@ jobs:
       - name: coverage check
         uses: actions/setup-python@v5
         with: 
-          python-version: "${{ needs.initialize.outpus.ver }}"
+          python-version: ${{ needs.initialize.outputs.ver }}
       - name: Install & Test
         run: |
             pip install pipenv
