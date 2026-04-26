@@ -2,7 +2,9 @@ on:
   workflow_call:
     inputs:
       ver: { required: true, type: string }
-
+permissions:
+  pull-requests: write
+  
 jobs:
   comment-push-details:
     runs-on: ubuntu-latest
@@ -22,4 +24,6 @@ jobs:
             pipenv sync --dev
             pipenv run pytest --cov=./ --cov-report=xml --cov-fail-under=80
       - uses: MishaKav/pytest-coverage-comment@v1.1.51
-        with: { pytest-xml-coverage-path: ./coverage.xml, title: "Python Coverage" }
+        with:
+          pytest-xml-coverage-path: ./coverage.xml
+          title: "Python Coverage"
