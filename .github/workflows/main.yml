@@ -46,10 +46,23 @@ jobs:
 
   python:
     needs: initialize
-    if: needs.initialize.outputs.lang == 'python'
-    uses: ./.github/workflows/sub-python.yml
-    with:
-      ver: ${{ needs.initialize.outputs.ver }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+      - name: coverage check
+        uses: actions/setup-python@v5
+        with: 
+          python-version: "${{ needs.initialize.outpus.ver }}"
+      - name: Install & Test
+        run: |
+            pip install pipenv
+            pipenv sync --dev
+            pipenv run pytest --cov=./ --cov-report=xml --cov-fail-under=80
+      - uses: MishaKav/pytest-coverage-comment@v1.1.51
+        with:
+          pytest-xml-coverage-path: ./coverage.xml
+          title: "Python Coverage"
 
   #go:
   #  needs: initialize
