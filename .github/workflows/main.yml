@@ -1,37 +1,17 @@
-name: Post Push Details to PR
-on:
-  pull_request:
-    types: [opened, synchronize]
+# central-ops-repo/.github/workflows/dispatcher.yml
+name: CI Dispatcher
+on: workflow_call
 
 jobs:
-  comment-push-details:
+  initialize:
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
+    outputs:
+      lang: ${{ steps.detect.outputs.lang }}
+      ver: ${{ steps.detect.outputs.ver }}
     steps:
-      - name: Comment on PR
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const prNumber = context.payload.pull_request.number;
-            const pusher = context.actor;
-            const commitSha = context.sha;
-            
-            const body = `### 🚀 New Push Details
-            - **Pushed by:** @${pusher}
-            - **Commit SHA:** \`${commitSha}\`
-            - **Workflow Run:** [View Details](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${context.runId})`;
+      - uses: actions/checkout@v4
 
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-              body: body
-            });
-      - name: checkout code
-        uses: actions/checkout@v4
-      - name: detect language version
-        id: detect
+      - id: detect
         run: |
           if [ -f "pom.xml" ]; then
             V=$(mvn help:evaluate -Dexpression=maven.compiler.release -q -DforceStdout | grep -v '\[')
@@ -48,16 +28,28 @@ jobs:
             fi
             echo "lang=python" >> $GITHUB_OUTPUT
             echo "ver=${V:-3.10}" >> $GITHUB_OUTPUT
-          fi      
-      - name: coverage check
-        uses: actions/setup-python@v5
-        with: 
-          python-version: "${{ steps.detect.outputs.ver }}"
-      - name: Install & Test
-        run: |
-            pip install pipenv
-            pipenv sync --dev
-            pipenv run pytest --cov=./ --cov-report=xml --cov-fail-under=80
-      - uses: MishaKav/pytest-coverage-comment@v1.1.51
-        with: { pytest-xml-coverage-path: ./coverage.xml, title: "Python Coverage" }
+          fi
 
+  maven:
+    needs: initialize
+    if: needs.initialize.outputs.lang == 'maven'
+    uses: ./.github/workflows/sub-maven.yml
+    with: 
+      user: ${{ needs.initialize.outputs.user }}
+      ver: ${{ needs.initialize.outputs.ver }}
+
+  python:
+    needs: initialize
+    if: needs.initialize.outputs.lang == 'python'
+    uses: ./.github/workflows/sub-python.yml
+    with:
+      user: ${{ needs.initialize.outputs.user }}
+      ver: ${{ needs.initialize.outputs.ver }}
+
+  go:
+    needs: initialize
+    if: needs.initialize.outputs.lang == 'go'
+    uses: ./.github/workflows/sub-go.yml
+    with:
+      user: ${{ needs.initialize.outputs.user }}
+      ver: ${{ needs.initialize.outputs.ver }}
