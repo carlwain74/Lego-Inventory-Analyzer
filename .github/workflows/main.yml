@@ -52,7 +52,7 @@ jobs:
       - name: coverage check
         uses: actions/setup-python@v5
         with: 
-          python-version: $ver
+          python-version: "${{ steps.detect.outputs.ver }}"
       - name: Install & Test
         run: |
             pip install pipenv
