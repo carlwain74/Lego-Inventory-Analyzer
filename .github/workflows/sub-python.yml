@@ -1,0 +1,25 @@
+on:
+  workflow_call:
+    inputs:
+      ver: { required: true, type: string }
+
+jobs:
+  comment-push-details:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+
+      - name: checkout code
+        uses: actions/checkout@v4
+      - name: coverage check
+        uses: actions/setup-python@v5
+        with: 
+          python-version: "${{ inputs.ver }}"
+      - name: Install & Test
+        run: |
+            pip install pipenv
+            pipenv sync --dev
+            pipenv run pytest --cov=./ --cov-report=xml --cov-fail-under=80
+      - uses: MishaKav/pytest-coverage-comment@v1.1.51
+        with: { pytest-xml-coverage-path: ./coverage.xml, title: "Python Coverage" }
