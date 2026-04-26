@@ -14,7 +14,9 @@ jobs:
           server-id: artifactory
           server-username: U
           server-password: T
-        env: { U: ${{ inputs.user }}, T: ${{ secrets.token }} }
+        env: 
+          U: ${{ inputs.user }}
+          T: ${{ secrets.token }}
       - run: mvn clean verify
       - uses: madrapps/jacoco-report@v1.7.1
         with:

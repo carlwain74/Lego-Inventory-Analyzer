@@ -8,8 +8,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
-        with: { go-version: ${{ inputs.ver }} }
-      - env: { GOPROXY: "https://${{inputs.user}}:${{secrets.token}}@your-org.jfrog.io/artifactory/api/go/go" }
+        with:
+           go-version: ${{ inputs.ver }}
+      - env:
+          { GOPROXY: "https://${{inputs.user}}:${{secrets.token}}@your-org.jfrog.io/artifactory/api/go/go" }
         run: go test -v -coverprofile=coverage.out ./...
       - name: Report
         run: |
