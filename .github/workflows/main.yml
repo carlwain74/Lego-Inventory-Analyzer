@@ -62,7 +62,7 @@ jobs:
             pipenv sync --dev
             pipenv run pytest --cov=./ --cov-report=xml --cov-fail-under=80
       - name: Pytest coverage comment
-      - uses: MishaKav/pytest-coverage-comment@v1.7.2
+        uses: MishaKav/pytest-coverage-comment@v1.7.2
         with:
           pytest-xml-coverage-path: ./coverage.xml
           title: "Python Coverage"
