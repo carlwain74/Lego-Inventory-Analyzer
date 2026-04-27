@@ -238,7 +238,7 @@ jobs:
                 body += `Please add tests to the files marked ❌ above and push again.\n`;
               } else {
                 body += `\n> ⚠️ Coverage is above the **${threshold}%** threshold. `;
-                body += `If any tests are marked ❌ above either add coverage or exclude them.\n`;
+                body += `\nIf any tests are marked ❌ above either add coverage or exclude them.\n`;
               }
             }
 
