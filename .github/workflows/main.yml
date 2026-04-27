@@ -117,39 +117,46 @@ jobs:
 
       - name: Parse Python coverage XML
         id: parse
+        env:
+          REPO_URL:   ${{ github.server_url }}/${{ github.repository }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          python3 - coverage.xml "$COVERAGE_THRESHOLD" <<'PYEOF'
+          python3 - coverage.xml "$COVERAGE_THRESHOLD" "$REPO_URL" "$COMMIT_SHA" <<'PYEOF'
           import sys, xml.etree.ElementTree as ET, os
-
-          report_path, threshold = sys.argv[1], int(sys.argv[2])
+ 
+          report_path, threshold, repo_url, sha = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4]
           tree = ET.parse(report_path)
           root = tree.getroot()
-
+ 
           overall_pct = float(root.get('line-rate', 0)) * 100
-
+ 
           rows = []
           for pkg in root.findall('.//package'):
               for cls in pkg.findall('.//class'):
                   fname = cls.get('filename', '')
+                  # Strip leading ./ if present
+                  clean = fname.lstrip('./')
+                  link = f"{repo_url}/blob/{sha}/{clean}" if clean else None
                   line_rate = float(cls.get('line-rate', 0))
                   pct = round(line_rate * 100, 1)
                   status = '✅' if pct >= threshold else '❌'
-                  rows.append((fname, pct, status))
-
+                  rows.append((clean, pct, status, link))
+ 
           passed = round(overall_pct, 1) >= threshold
-
+ 
           table_lines = ['| File | Line Coverage | Status |',
                          '|------|---------------|--------|']
-          for fname, pct, st in rows:
-              table_lines.append(f'| `{fname}` | {pct}% | {st} |')
+          for fname, pct, st, link in rows:
+              file_cell = f'[`{fname}`]({link})' if link else f'`{fname}`'
+              table_lines.append(f'| {file_cell} | {pct}% | {st} |')
           table = '\n'.join(table_lines)
-
+ 
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"coverage={round(overall_pct, 1)}\n")
               f.write(f"passed={'true' if passed else 'false'}\n")
               escaped = table.replace('%', '%25').replace('\n', '%0A').replace('\r', '%0D')
               f.write(f"coverage_table={escaped}\n")
-
+ 
           print(f"Overall Python coverage: {round(overall_pct,1)}%  passed={passed}")
           PYEOF
 
