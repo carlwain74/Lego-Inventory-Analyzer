@@ -104,10 +104,10 @@ jobs:
         with: 
           python-version: ${{ needs.detect-languages.outputs.python_version }}
       - name: Coverage Check Report
-         run: |
-             pip install pipenv
-             pipenv sync --dev
-             pipenv run pytest --cov=./ --cov-report=xml --cov-fail-under=80
+        run: |
+          pip install pipenv
+          pipenv sync --dev
+          pipenv run pytest --cov=./ --cov-report=xml --cov-fail-under=80
       #- name: Pytest coverage comment
       #  id: coverage
       #  uses: MishaKav/pytest-coverage-comment@v1.7.2
