@@ -1,5 +1,5 @@
-# central-ops-repo/.github/workflows/dispatcher.yml
-name: CI Dispatcher
+# .github/workflows/main.yml
+name: Code Coverage Checker
 on:
   pull_request:
     branches:
