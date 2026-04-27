@@ -100,8 +100,8 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Python
-         uses: actions/setup-python@v5
-         with: 
+        uses: actions/setup-python@v5
+        with: 
           python-version: ${{ needs.detect-languages.outputs.python_version }}
       - name: Coverage Check Report
          run: |
