@@ -102,7 +102,7 @@ jobs:
       - name: Setup Python
          uses: actions/setup-python@v5
          with: 
-          python-version: ${{ needs.initialize.outputs.ver }}
+          python-version: ${{ needs.detect-languages.outputs.python_version }}
       - name: Coverage Check Report
          run: |
              pip install pipenv
