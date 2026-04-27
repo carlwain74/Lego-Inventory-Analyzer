@@ -209,17 +209,13 @@ jobs:
               const icon       = lang.passed ? '✅' : '❌';
               const statusText = lang.passed ? 'PASSED' : 'FAILED';
               const bar        = buildBar(lang.coverage);
-              const delta      = (lang.coverage - threshold).toFixed(1);
-              const deltaStr   = lang.passed
-                ? `+${delta}% above threshold`
-                : `${delta}% below threshold`;
-
+    
               body += `## ${icon} Code Coverage — ${statusText}\n\n`;
               body += `| | |\n|---|---|\n`;
               body += `| **Language** | ${lang.icon} ${lang.name} ${lang.version} |\n`;
               body += `| **Coverage** | **${lang.coverage}%** ${bar} |\n`;
               body += `| **Threshold** | ${threshold}% |\n`;
-              body += `| **Status** | ${icon} ${statusText} (${deltaStr}) |\n\n`;
+              body += `| **Status** | ${icon} ${statusText} |\n\n`;
 
               // Per-file breakdown
               body += `### File / Module Breakdown\n\n`;
