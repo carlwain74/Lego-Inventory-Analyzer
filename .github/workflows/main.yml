@@ -218,9 +218,10 @@ jobs:
               body += `| **Status** | ${icon} ${statusText} |\n\n`;
 
               // Per-file breakdown
-              body += `### File / Module Breakdown\n\n`;
+              body += `<details>\n<summary><strong>### File / Module Breakdown</strong></summary>\n\n`;
               if (lang.table) {
                 body += lang.table + '\n';
+                body += `\n</details>\n`;
               } else {
                 body += '_No per-file breakdown available._\n';
               }
