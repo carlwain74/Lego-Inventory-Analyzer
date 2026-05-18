@@ -104,6 +104,220 @@
       margin-top: 4px;
     }
 
+
+
+    /* ── Import progress / summary panels ── */
+    .import-progress-state,
+    .import-summary-state {
+      display: flex;
+      flex: 1;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+    }
+    .import-progress-inner {
+      width: 100%;
+      max-width: 480px;
+      text-align: center;
+    }
+    .import-progress-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+    .import-progress-title {
+      font-size: 1.2rem;
+      font-weight: 900;
+      margin: 0 0 20px;
+      color: var(--black);
+    }
+    .import-big-bar-track {
+      height: 14px;
+      background: var(--grey);
+      border-radius: 7px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .import-big-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--blue);
+      border-radius: 7px;
+      transition: width 0.4s ease;
+    }
+    .import-counts {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--blue);
+      letter-spacing: 0.05em;
+      margin-bottom: 24px;
+    }
+    .import-stat-row {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+    }
+    .import-stat {
+      flex: 1;
+      max-width: 120px;
+      padding: 14px 8px;
+      border-radius: var(--radius);
+      border: 2px solid var(--grey);
+      background: #fff;
+    }
+    .import-stat.ok     { border-color: #b6e3b6; background: #f0faf0; }
+    .import-stat.cached { border-color: var(--grey); background: #f7f7f5; }
+    .import-stat.err    { border-color: #f5b8b8; background: #fdf0f0; }
+    .import-stat-num {
+      display: block;
+      font-size: 2rem;
+      font-weight: 900;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .import-stat.ok   .import-stat-num { color: #2a7a2a; }
+    .import-stat.cached .import-stat-num { color: #888; }
+    .import-stat.err  .import-stat-num { color: var(--red); }
+    .import-stat-lbl {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #888;
+    }
+    .import-failures-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      text-align: left;
+      margin-top: 4px;
+    }
+    .import-failures-table th {
+      font-weight: 900;
+      font-size: 0.68rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--red);
+      padding: 6px 8px;
+      border-bottom: 2px solid #f5b8b8;
+    }
+    .import-failures-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #fde8e8;
+      color: var(--black);
+    }
+    .import-failures-table td:first-child {
+      font-weight: 700;
+      font-family: monospace;
+    }
+
+    /* ── Sidebar nav buttons ── */
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border-radius: var(--radius);
+      border: 2px solid transparent;
+      background: transparent;
+      color: var(--black);
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .nav-btn:hover { background: #eef4fb; border-color: var(--blue); color: var(--blue); }
+    .nav-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .nav-btn.danger:hover { background: #fdecea; border-color: var(--red); color: var(--red); }
+    .nav-btn.danger { color: var(--red); }
+    .nav-btn.hidden { display: none; }
+
+    /* ── Progress bar ── */
+    .progress-wrap {
+      margin: 14px 0 0;
+      display: none;
+    }
+    .progress-wrap.visible { display: block; }
+    .progress-bar-track {
+      height: 8px;
+      background: var(--grey);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--blue);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+    .progress-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--blue);
+      letter-spacing: 0.04em;
+    }
+    .progress-log {
+      margin-top: 8px;
+      max-height: 80px;
+      overflow-y: auto;
+      font-size: 0.68rem;
+      color: #555;
+    }
+    .progress-log-row { padding: 1px 0; }
+    .progress-log-row.ok   { color: #2a7a2a; }
+    .progress-log-row.cached { color: #888; }
+    .progress-log-row.err  { color: var(--red); }
+
+    /* ── Inventory card extras ── */
+    .qty-badge {
+      display: inline-block;
+      background: var(--yellow);
+      color: var(--black);
+      font-size: 0.65rem;
+      font-weight: 900;
+      padding: 1px 7px;
+      border-radius: 20px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      padding: 10px 14px 4px;
+      border-top: 1px solid var(--grey);
+      margin-top: 6px;
+    }
+    .card-action-btn {
+      flex: 1;
+      padding: 5px 0;
+      border-radius: var(--radius);
+      border: 1.5px solid var(--grey);
+      background: transparent;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .card-action-btn.remove:hover { background: #fdecea; border-color: var(--red); color: var(--red); }
+    .card-action-btn.refresh:hover { background: #eef4fb; border-color: var(--blue); color: var(--blue); }
+    .card-last-fetched {
+      font-size: 0.65rem;
+      color: #888;
+      padding: 2px 14px 8px;
+      text-align: right;
+    }
+
+    /* ── Clear inventory confirm modal ── */
+    #clear-modal .modal-header { background: var(--red); }
+
     .sidebar-version {
       padding: 12px 16px;
       font-size: 0.68rem;
@@ -883,13 +1097,18 @@
     .filter-bar {
       background: var(--black);
       border-bottom: 2px solid #2a2a2e;
-      padding: 12px 20px;
+      padding: 10px 20px 12px;
       display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .filter-bar.visible { display: flex; }
+    .filter-chips-row {
+      display: flex;
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
     }
-    .filter-bar.visible { display: flex; }
 
     .filter-label {
       font-size: 0.65rem;
@@ -932,6 +1151,47 @@
       opacity: 0.7;
     }
     .filter-chip.active .chip-count { opacity: 0.6; }
+
+    .filter-search {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .filter-search-svg {
+      display: block;
+      flex-shrink: 0;
+      opacity: 0.6;
+    }
+    .filter-search-input {
+      background: #1a1b1e !important;
+      border: 2px solid #444;
+      border-radius: 20px;
+      color: #eee !important;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 5px 24px 5px 10px;
+      width: 96px;
+      outline: none;
+      transition: border-color 0.15s;
+      box-sizing: border-box;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .filter-search-input::placeholder { color: #666 !important; }
+    .filter-search-input:focus { border-color: var(--yellow); }
+    .filter-search-clear {
+      background: none;
+      border: none;
+      color: #666;
+      font-size: 0.8rem;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      display: none;
+      flex-shrink: 0;
+    }
+    .filter-search-clear.visible { display: block; }
 
     /* Summary bar (file mode) */
     .summary-bar {
@@ -1016,8 +1276,34 @@
     </div>
 
     <div class="sidebar-body">
+
+      <!-- ── Navigation ── -->
+      <div class="sidebar-nav">
+        <button class="nav-btn active" id="nav-check">🔍 Check Prices</button>
+        <button class="nav-btn" id="nav-import">📥 Import Sets</button>
+        <button class="nav-btn" id="nav-inventory">
+          <span>📦 My Inventory</span>
+          <span style="margin-left:auto;display:none;align-items:center;gap:4px;" id="nav-inventory-icons">
+            <span id="nav-refresh-icon" title="Refresh all prices" style="cursor:pointer;padding:2px 4px;border-radius:4px;line-height:0;" aria-label="Refresh all prices">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+                <polyline points="21 3 21 8 16 8"/>
+              </svg>
+            </span>
+            <span id="nav-clear-icon" title="Clear inventory" style="cursor:pointer;padding:2px 4px;border-radius:4px;line-height:0;color:var(--red);" aria-label="Clear inventory">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6"/>
+                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              </svg>
+            </span>
+          </span>
+        </button>
+      </div>
+
       <div class="sidebar-top-bar">
-        <div class="section-label">Configure</div>
+        <div class="section-label" id="sidebar-section-label">Check</div>
         <button class="cog-btn" id="cog-btn" title="API Settings" aria-label="Open API settings">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"/>
@@ -1026,51 +1312,52 @@
         </button>
       </div>
 
-      <div class="field-group">
-        <label for="mode">Input Type</label>
-        <select id="mode" name="mode">
-          <option value="set">Single Set Number</option>
-          <option value="file">File List (multiple sets)</option>
-        </select>
-      </div>
-
-      <!-- Single set: auto-appends -1 if missing -->
-      <div class="field-group" id="set-field">
-        <label for="set_number">Set Number</label>
-        <div class="input-with-hint">
-          <input type="text" id="set_number" name="set_number"
-                 placeholder="e.g. 75192" maxlength="20" />
-          <span class="input-suffix">-1</span>
+      <!-- ── Check / Import shared fields ── -->
+      <div id="check-import-fields">
+        <div class="field-group">
+          <label for="mode">Input Type</label>
+          <select id="mode" name="mode">
+            <option value="set">Single Set Number</option>
+            <option value="file">File List (multiple sets)</option>
+          </select>
         </div>
-      </div>
 
-      <!-- File upload -->
-      <div class="field-group" id="file-field" style="display:none;">
-        <label>Set List File <span style="font-weight:400;color:#888;font-size:0.8rem;">(one per line)</span></label>
-        <div class="file-upload-wrapper">
-          <label class="file-upload-label" for="set_file">
-            <span class="upload-icon">📂</span>
-            <span class="file-name" id="file-name-display">Choose a .txt file…</span>
-          </label>
-          <input type="file" id="set_file" name="set_file" accept=".txt,.list" />
+        <div class="field-group" id="set-field">
+          <label for="set_number">Set Number</label>
+          <div class="input-with-hint">
+            <input type="text" id="set_number" name="set_number"
+                   placeholder="e.g. 75192" maxlength="20" />
+            <span class="input-suffix">-1</span>
+          </div>
         </div>
+
+        <div class="field-group" id="file-field" style="display:none;">
+          <label>Set List File <span style="font-weight:400;color:#888;font-size:0.8rem;">(one per line)</span></label>
+          <div class="file-upload-wrapper">
+            <label class="file-upload-label" for="set_file">
+              <span class="upload-icon">📂</span>
+              <span class="file-name" id="file-name-display">Choose a .txt file…</span>
+            </label>
+            <input type="file" id="set_file" name="set_file" accept=".txt,.list" />
+          </div>
+        </div>
+
+        <!-- Multi-sheet (check file mode only) -->
+        <div class="collapsible field-group" id="multi-sheet-field">
+          <label for="multi_sheet">Multi-Sheet Output</label>
+          <select id="multi_sheet" name="multi_sheet">
+            <option value="false">Disabled — combined sheet</option>
+            <option value="true">Enabled — one sheet per set</option>
+          </select>
+        </div>
+
+        <div class="divider"></div>
+
+        <button class="btn-submit" id="submit-btn" type="button">
+          <span class="btn-text">🔍 Check Prices</span>
+          <span class="spinner"></span>
+        </button>
       </div>
-
-      <!-- Multi-sheet (file mode only) -->
-      <div class="collapsible field-group" id="multi-sheet-field">
-        <label for="multi_sheet">Multi-Sheet Output</label>
-        <select id="multi_sheet" name="multi_sheet">
-          <option value="false">Disabled — combined sheet</option>
-          <option value="true">Enabled — one sheet per set</option>
-        </select>
-      </div>
-
-      <div class="divider"></div>
-
-      <button class="btn-submit" id="submit-btn" type="button">
-        <span class="btn-text">🔧 Generate Inventory</span>
-        <span class="spinner"></span>
-      </button>
     </div>
     <div class="sidebar-version">v{{ version }}</div>
   </aside>
@@ -1081,18 +1368,98 @@
     <div class="empty-state" id="empty-state">
       <span class="empty-icon">📋</span>
       <h2>No results yet</h2>
-      <p>Configure a set and hit Generate</p>
+      <p>Configure a set and hit Check</p>
+    </div>
+
+    <!-- Refresh progress panel -->
+    <div class="import-progress-state" id="refresh-progress-state" style="display:none;">
+      <div class="import-progress-inner">
+        <div class="import-progress-icon">🔄</div>
+        <h2 class="import-progress-title" id="refresh-progress-title">Refreshing Prices…</h2>
+        <div class="import-big-bar-track">
+          <div class="import-big-bar-fill" id="refresh-big-bar-fill"></div>
+        </div>
+        <div class="import-counts" id="refresh-counts">0 / 0</div>
+        <div class="import-stat-row">
+          <div class="import-stat ok">
+            <span class="import-stat-num" id="refresh-stat-ok">0</span>
+            <span class="import-stat-lbl">Updated</span>
+          </div>
+          <div class="import-stat err">
+            <span class="import-stat-num" id="refresh-stat-err">0</span>
+            <span class="import-stat-lbl">Failed</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import progress panel -->
+    <div class="import-progress-state" id="import-progress-state" style="display:none;">
+      <div class="import-progress-inner">
+        <div class="import-progress-icon">📥</div>
+        <h2 class="import-progress-title" id="import-progress-title">Importing Sets…</h2>
+        <div class="import-big-bar-track">
+          <div class="import-big-bar-fill" id="import-big-bar-fill"></div>
+        </div>
+        <div class="import-counts" id="import-counts">0 / 0</div>
+        <div class="import-stat-row">
+          <div class="import-stat ok">
+            <span class="import-stat-num" id="import-stat-ok">0</span>
+            <span class="import-stat-lbl">Imported</span>
+          </div>
+          <div class="import-stat cached">
+            <span class="import-stat-num" id="import-stat-cached">0</span>
+            <span class="import-stat-lbl">Cached</span>
+          </div>
+          <div class="import-stat err">
+            <span class="import-stat-num" id="import-stat-err">0</span>
+            <span class="import-stat-lbl">Failed</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import summary panel (shown after bulk import completes) -->
+    <div class="import-summary-state" id="import-summary-state" style="display:none;">
+      <div class="import-progress-inner">
+        <div class="import-progress-icon">✅</div>
+        <h2>Import Complete</h2>
+        <div class="import-stat-row" style="margin:16px 0 24px;">
+          <div class="import-stat ok">
+            <span class="import-stat-num" id="summary-stat-ok">0</span>
+            <span class="import-stat-lbl">Imported</span>
+          </div>
+          <div class="import-stat cached">
+            <span class="import-stat-num" id="summary-stat-cached">0</span>
+            <span class="import-stat-lbl">Cached</span>
+          </div>
+          <div class="import-stat err">
+            <span class="import-stat-num" id="summary-stat-err">0</span>
+            <span class="import-stat-lbl">Failed</span>
+          </div>
+        </div>
+        <div id="import-failures-wrap" style="display:none;">
+          <div class="section-label" style="margin-bottom:8px;">Failed Sets</div>
+          <table class="import-failures-table" id="import-failures-table">
+            <thead><tr><th>Set Number</th><th>Reason</th></tr></thead>
+            <tbody id="import-failures-body"></tbody>
+          </table>
+        </div>
+        <button class="btn-submit" id="import-view-btn" style="margin-top:20px;padding:0 24px;display:inline-block;">
+          View Imported Sets
+        </button>
+      </div>
     </div>
 
     <div class="loading-state" id="loading-state">
       <div class="lego-spinner">
         <div class="spinner-stud"></div>
       </div>
-      <span class="loading-label">Generating…</span>
+      <span class="loading-label">Checking…</span>
     </div>
 
     <div class="output-wrap" id="output-wrap">
-      <div class="output-header">
+      <div class="output-header" id="output-header">
         <div class="dot dot-red"></div>
         <div class="dot dot-blue"></div>
         <div class="dot dot-black"></div>
@@ -1107,8 +1474,20 @@
       <!-- Set cards body -->
       <div class="set-cards-body" id="set-cards-body" style="display:none;">
         <div class="filter-bar" id="filter-bar">
-          <span class="filter-label">Category</span>
-          <!-- chips injected here -->
+          <div class="filter-chips-row" id="filter-chips-row">
+            <span class="filter-label">Category</span>
+            <!-- chips injected here -->
+          </div>
+          <div class="filter-search">
+            <svg class="filter-search-svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="#aaa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input class="filter-search-input" id="filter-search"
+                   type="text" placeholder="Search…"
+                   autocomplete="off" spellcheck="false" />
+            <button class="filter-search-clear" id="filter-search-clear" aria-label="Clear search">✕</button>
+          </div>
         </div>
         <div class="set-cards-scroll" id="set-cards-scroll">
           <!-- cards injected here -->
@@ -1124,6 +1503,23 @@
     </div>
 
   </main>
+</div>
+
+<!-- ══ CLEAR INVENTORY MODAL ══ -->
+<div class="modal-backdrop" id="clear-modal" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-header" style="background:var(--red);">
+      <h2>🗑 Clear Inventory</h2>
+      <button class="modal-close" id="clear-modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0;">This will permanently remove <strong id="clear-count">all</strong> sets from your inventory. This cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" id="clear-cancel">Cancel</button>
+      <button class="btn-save" id="clear-confirm" style="background:var(--red);border-color:var(--red);">Delete All</button>
+    </div>
+  </div>
 </div>
 
 <!-- ══ SETTINGS MODAL ══ -->
@@ -1340,55 +1736,7 @@
       ? fileInput.files[0].name : 'Choose a .txt file…';
   });
 
-  /* ── Submit ── */
-  submitBtn.addEventListener('click', async () => {
-    const mode = modeSelect.value;
-    let setNumber = '';
-
-    if (mode === 'set') {
-      let raw = document.getElementById('set_number').value.trim();
-      if (!raw) { showError('⚠️  Please enter a set number.'); return; }
-
-      // Strip any existing suffix then always append -1
-      raw = raw.replace(/-\d+$/, '');
-      if (!/^\d+$/.test(raw)) { showError('⚠️  Invalid format — enter digits only (e.g. 75192)'); return; }
-      setNumber = raw + '-1';
-
-    } else {
-      if (!fileInput.files[0]) { showError('⚠️  Please select a file to upload.'); return; }
-    }
-
-    setLoading(true);
-
-    const formData = new FormData();
-    formData.append('mode', mode);
-    if (mode === 'set') {
-      formData.append('set_number', setNumber);
-    } else {
-      formData.append('set_file', fileInput.files[0]);
-      formData.append('multi_sheet', document.getElementById('multi_sheet').value);
-    }
-
-    try {
-      const response = await fetch('/generate', { method: 'POST', body: formData });
-      const data     = await response.json();
-
-      if (data.error) {
-        showError('❌  ' + data.error);
-      } else {
-        const sets = normaliseSets(data);
-        if (sets.length === 0) {
-          showError('⚠️  No set data returned.');
-        } else {
-          showSetCards(sets, mode === 'file');
-        }
-      }
-    } catch (err) {
-      showError('❌  Network error: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  });
+  /* Submit handled by runCheck() / runImport() via sidebar nav */
 
   /* ════════════════════════════════
      NORMALISE
@@ -1398,7 +1746,10 @@
      expects.
   ════════════════════════════════ */
   function normaliseSets(setsMap) {
+    if (!setsMap || typeof setsMap !== 'object') return [];
     return Object.entries(setsMap).map(([number, s]) => {
+      if (!s || typeof s !== 'object') return null;
+      try {
       const cur  = s.current || {};
       const prev = s.past    || {};
       const currency = cur.currency || prev.currency || '';
@@ -1430,21 +1781,33 @@
         prev_qty: prev.quantity != null ? String(prev.quantity) : '—',
         prev_date: formatSaleDate(prev.last_sale_date || ''),
         // Derived
-        saleValue: calcSaleValue(cur_avg, cur_max),
+        saleValue:    calcSaleValue(cur_avg, cur_max),
+        // Inventory fields (present when loaded from /inventory)
+        quantity:     s.quantity    != null ? s.quantity    : null,
+        last_fetched: s.last_fetched || null,
       };
-    });
+      } catch(e) {
+        console.error('normaliseSets error for', number, e.name, e.message, e.stack);
+        return null;
+      }
+    }).filter(Boolean);
   }
 
   /* ════════════════════════════════
      RENDERING
   ════════════════════════════════ */
-  function buildSetCard(s) {
+  function buildSetCard(s, isInventory = false) {
     const card = document.createElement('div');
     card.className = 'set-card';
+    card.dataset.setNumber = s.number;
+
+    const qtyBadge = (isInventory && s.quantity > 1)
+      ? `<span class="qty-badge" id="qty-badge-${esc(s.number)}">×${s.quantity}</span>` : '';
+
     card.innerHTML = `
       <div class="set-hero">
         <div style="flex:1;min-width:0;">
-          <div class="set-number-badge">${esc(s.number)}</div>
+          <div class="set-number-badge">${esc(s.number)}${qtyBadge}</div>
           <div class="set-name">${esc(s.name)}</div>
           <div class="set-category">${esc(s.category)}</div>
         </div>
@@ -1501,19 +1864,44 @@
           <div class="stat-value last-sale-date">${esc(s.prev_date)}</div>
         </div>
       </div>`;
+
+    if (isInventory) {
+      const lastFetchedStr = s.last_fetched
+        ? formatSaleDate(s.last_fetched.substring(0, 10) + 'T00:00:00Z') : '—';
+      const footer = document.createElement('div');
+      footer.innerHTML = `
+        <div class="card-last-fetched">Updated: ${lastFetchedStr}</div>
+        <div class="card-actions">
+          <button class="card-action-btn remove" data-set="${esc(s.number)}">&#x2715; Remove</button>
+        </div>`;
+      card.appendChild(footer);
+      footer.querySelector('.remove').addEventListener('click', () => handleRemove(s.number, card));
+    }
+
     return card;
   }
 
   // Full parsed set list — kept for filtering
   let _allSets = [];
   let _activeCategory = 'all';
+  let _isInventory = false;
+  let _searchTerm = '';
 
-  function showSetCards(sets, isFileMode) {
+  function showSetCards(sets, isFileMode, isInventory = false) {
     _allSets = sets;
     _activeCategory = 'all';
+    _isInventory = isInventory;
+    _searchTerm = '';
+    const searchInput = document.getElementById('filter-search');
+    const searchClear = document.getElementById('filter-search-clear');
+    if (searchInput) { searchInput.value = ''; }
+    if (searchClear) { searchClear.classList.remove('visible'); }
 
-    // Build category filter chips (file mode only)
-    if (isFileMode && sets.length > 1) {
+    // Build category filter chips
+    const chipsRow = document.getElementById('filter-chips-row');
+    chipsRow.querySelectorAll('.filter-chip').forEach(c => c.remove());
+
+    if (sets.length > 1) {
       const counts = {};
       sets.forEach(s => {
         const cat = s.category || '—';
@@ -1521,56 +1909,80 @@
       });
       const categories = Object.keys(counts).sort();
 
-      // Clear old chips (keep label)
-      filterBar.querySelectorAll('.filter-chip').forEach(c => c.remove());
-
       // "All" chip
       const allChip = makeChip('All', sets.length, true);
       allChip.addEventListener('click', () => applyFilter('all'));
-      filterBar.appendChild(allChip);
+      chipsRow.appendChild(allChip);
 
-      // Per-category chips
-      categories.forEach(cat => {
-        const chip = makeChip(cat, counts[cat], false);
-        chip.addEventListener('click', () => applyFilter(cat));
-        filterBar.appendChild(chip);
-      });
-
-      filterBar.classList.add('visible');
-    } else {
-      filterBar.classList.remove('visible');
+      // Per-category chips (only if more than one category)
+      if (categories.length > 1) {
+        categories.forEach(cat => {
+          const chip = makeChip(cat, counts[cat], false);
+          chip.addEventListener('click', () => applyFilter(cat));
+          chipsRow.appendChild(chip);
+        });
+      }
     }
 
-    renderCards(sets, isFileMode);
+    // Always show filter bar when cards are visible
+    filterBar.classList.add('visible');
 
-    outputTitle.textContent    = isFileMode
-      ? `${sets.length} Set${sets.length !== 1 ? 's' : ''} Found`
-      : 'Set Details';
+    renderCards(sets, isFileMode, isInventory);
+
+    outputTitle.textContent    = '';
     terminalBody.style.display = 'none';
     setCardsBody.style.display = 'none';
     revealOutput();
     requestAnimationFrame(() => { setCardsBody.style.display = 'flex'; });
   }
 
+  /* ── Search input ── */
+  const filterSearch      = document.getElementById('filter-search');
+  const filterSearchClear = document.getElementById('filter-search-clear');
+
+  filterSearch.addEventListener('input', () => {
+    _searchTerm = filterSearch.value.trim();
+    filterSearchClear.classList.toggle('visible', _searchTerm.length > 0);
+    applyFilter(_activeCategory);
+  });
+
+  filterSearchClear.addEventListener('click', () => {
+    filterSearch.value = '';
+    _searchTerm = '';
+    filterSearchClear.classList.remove('visible');
+    filterSearch.focus();
+    applyFilter(_activeCategory);
+  });
+
   function applyFilter(category) {
     _activeCategory = category;
-    const filtered  = category === 'all'
+    let filtered = category === 'all'
       ? _allSets
       : _allSets.filter(s => s.category === category);
 
+    // Apply search term on top of category filter
+    const term = _searchTerm.toLowerCase().replace(/\s+/g, '');
+    if (term) {
+      filtered = filtered.filter(s => {
+        const num  = (s.number || '').toLowerCase().replace(/\s+/g, '');
+        const name = (s.name   || '').toLowerCase();
+        return num.startsWith(term) || name.includes(term);
+      });
+    }
+
     // Update chip active states
-    filterBar.querySelectorAll('.filter-chip').forEach(chip => {
+    document.getElementById('filter-chips-row').querySelectorAll('.filter-chip').forEach(chip => {
       const isAll = category === 'all' && chip.dataset.cat === 'all';
       const match = chip.dataset.cat === category;
       chip.classList.toggle('active', isAll || match);
     });
 
-    renderCards(filtered, true);
+    renderCards(filtered, true, _isInventory);
   }
 
-  function renderCards(sets, isFileMode) {
+  function renderCards(sets, isFileMode, isInventory = false) {
     setCardsScroll.innerHTML = '';
-    sets.forEach(s => setCardsScroll.appendChild(buildSetCard(s)));
+      sets.forEach(s => setCardsScroll.appendChild(buildSetCard(s, isInventory)));
 
     if (isFileMode && _allSets.length > 1) {
       const currency = (_allSets[0]?.cur_avg || _allSets[0]?.prev_avg || '').split(' ')[1] || '';
@@ -1712,6 +2124,441 @@
   });
 
   /* ── Helpers ── */
+
+  /* ════════════════════════════════
+     SIDEBAR NAVIGATION
+  ════════════════════════════════ */
+  const navCheck     = document.getElementById('nav-check');
+  const navImport    = document.getElementById('nav-import');
+  const navInventory = document.getElementById('nav-inventory');
+  const navClearIcon      = document.getElementById('nav-clear-icon');
+  const navInventoryIcons = document.getElementById('nav-inventory-icons');
+  const navRefreshIcon    = document.getElementById('nav-refresh-icon');
+  const refreshProgressState = document.getElementById('refresh-progress-state');
+  const refreshBigBarFill    = document.getElementById('refresh-big-bar-fill');
+  const refreshCounts        = document.getElementById('refresh-counts');
+  const refreshStatOk        = document.getElementById('refresh-stat-ok');
+  const refreshStatErr       = document.getElementById('refresh-stat-err');
+  const refreshProgressTitle = document.getElementById('refresh-progress-title');
+  const sidebarLabel = document.getElementById('sidebar-section-label');
+  const checkImportFields = document.getElementById('check-import-fields');
+  /* Import progress panel (right side) */
+  const importProgressState  = document.getElementById('import-progress-state');
+  const importSummaryState   = document.getElementById('import-summary-state');
+  const importBigBarFill     = document.getElementById('import-big-bar-fill');
+  const importCounts         = document.getElementById('import-counts');
+  const importStatOk         = document.getElementById('import-stat-ok');
+  const importStatCached     = document.getElementById('import-stat-cached');
+  const importStatErr        = document.getElementById('import-stat-err');
+  const importProgressTitle  = document.getElementById('import-progress-title');
+  const summaryStatOk        = document.getElementById('summary-stat-ok');
+  const summaryStatCached    = document.getElementById('summary-stat-cached');
+  const summaryStatErr       = document.getElementById('summary-stat-err');
+  const importFailuresWrap   = document.getElementById('import-failures-wrap');
+  const importFailuresBody   = document.getElementById('import-failures-body');
+  const importViewBtn        = document.getElementById('import-view-btn');
+  let _sidebarMode = 'check'; // 'check' | 'import' | 'inventory'
+
+  function setSidebarMode(mode) {
+    _sidebarMode = mode;
+    navCheck.classList.toggle('active',     mode === 'check');
+    navImport.classList.toggle('active',    mode === 'import');
+    navInventory.classList.toggle('active', mode === 'inventory');
+
+    // Always hide import/refresh panels when switching modes
+    importProgressState.style.display  = 'none';
+    importSummaryState.style.display   = 'none';
+    refreshProgressState.style.display = 'none';
+
+    checkImportFields.style.display = mode === 'inventory' ? 'none' : 'block';
+    if (mode === 'check') {
+      sidebarLabel.textContent = 'Check';
+      submitBtn.querySelector('.btn-text').textContent = '🔍 Check Prices';
+      // Show multi-sheet for check file mode
+      multiSheetField.style.display = '';
+    } else if (mode === 'import') {
+      sidebarLabel.textContent = 'Import';
+      submitBtn.querySelector('.btn-text').textContent = '📥 Import Sets';
+      // Hide multi-sheet for import (not relevant)
+      multiSheetField.style.display = 'none';
+    } else {
+      sidebarLabel.textContent = 'Inventory';
+      loadInventory();
+    }
+  }
+
+  navCheck.addEventListener('click',     () => setSidebarMode('check'));
+  navImport.addEventListener('click',    () => setSidebarMode('import'));
+  navInventory.addEventListener('click', () => setSidebarMode('inventory'));
+
+  /* ── Submit button routes to check or import ── */
+  submitBtn.addEventListener('click', async () => {
+    if (_sidebarMode === 'check')  return runCheck();
+    if (_sidebarMode === 'import') return runImport();
+  });
+
+  /* ════════════════════════════════
+     CHECK (was Generate)
+  ════════════════════════════════ */
+  async function runCheck() {
+    const mode = modeSelect.value;
+    let setNumber = '';
+
+    if (mode === 'set') {
+      let raw = document.getElementById('set_number').value.trim();
+      if (!raw) { showError('⚠️  Please enter a set number.'); return; }
+      raw = raw.replace(/-\d+$/, '');
+      if (!/^\d+$/.test(raw)) { showError('⚠️  Invalid format — enter digits only (e.g. 75192)'); return; }
+      setNumber = raw + '-1';
+    } else {
+      if (!fileInput.files[0]) { showError('⚠️  Please select a file to upload.'); return; }
+    }
+
+    setLoading(true);
+    const formData = new FormData();
+    formData.append('mode', mode);
+    if (mode === 'set') {
+      formData.append('set_number', setNumber);
+    } else {
+      formData.append('set_file', fileInput.files[0]);
+      formData.append('multi_sheet', document.getElementById('multi_sheet').value);
+    }
+
+    try {
+      const response = await fetch('/generate', { method: 'POST', body: formData });
+      const data     = await response.json();
+      if (data.error) {
+        showError('❌  ' + data.error);
+      } else {
+        const sets = normaliseSets(data);
+        sets.length === 0
+          ? showError('⚠️  No set data returned.')
+          : showSetCards(sets, mode === 'file', false);
+      }
+    } catch (err) {
+      showError('❌  Network error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* ════════════════════════════════
+     IMPORT — single or bulk SSE
+  ════════════════════════════════ */
+  async function runImport() {
+    const mode = modeSelect.value;
+
+    if (mode === 'set') {
+      // Single set import
+      let raw = document.getElementById('set_number').value.trim();
+      if (!raw) { showError('⚠️  Please enter a set number.'); return; }
+      raw = raw.replace(/-\d+$/, '');
+      if (!/^\d+$/.test(raw)) { showError('⚠️  Invalid format — enter digits only (e.g. 75192)'); return; }
+      const setNumber = raw + '-1';
+
+      setLoading(true);
+      try {
+        const res  = await fetch('/inventory/import', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ set_number: setNumber }),
+        });
+        const data = await res.json();
+        if (data.error) {
+          showError('❌  ' + data.error);
+        } else if (!data.set) {
+          showError('❌  Import returned no set data.');
+        } else {
+          const sets = normaliseSets({ [setNumber]: data.set });
+          showSetCards(sets, false, true);
+          updateClearButton();
+        }
+      } catch (err) {
+        console.error('Import error:', err.name, err.message, err.stack);
+        showError('❌  ' + err.message);
+      } finally {
+        setLoading(false);
+      }
+
+    } else {
+      // Bulk file import via SSE
+      if (!fileInput.files[0]) { showError('⚠️  Please select a file to upload.'); return; }
+
+      const formData = new FormData();
+      formData.append('set_file', fileInput.files[0]);
+
+      // Show the import progress panel in the right side
+      emptyState.style.display           = 'none';
+      loadingState.classList.remove('visible');
+      outputWrap.classList.remove('visible');
+      importSummaryState.style.display   = 'none';
+      importProgressState.style.display  = 'flex';
+      importProgressTitle.textContent    = 'Importing Sets…';
+      importBigBarFill.style.width       = '0%';
+      importCounts.textContent           = '0 / ?';
+      importStatOk.textContent           = '0';
+      importStatCached.textContent       = '0';
+      importStatErr.textContent          = '0';
+
+      submitBtn.disabled = true;
+
+      const allSets    = {};
+      const failures   = [];
+      let countOk      = 0;
+      let countCached  = 0;
+      let countErr     = 0;
+
+      try {
+        const res     = await fetch('/inventory/import/bulk', { method: 'POST', body: formData });
+        const reader  = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer    = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            let evt;
+            try { evt = JSON.parse(line.slice(6)); } catch { continue; }
+
+            if (evt.done) {
+              // Transition to summary panel
+              importProgressState.style.display = 'none';
+              importSummaryState.style.display  = 'flex';
+              summaryStatOk.textContent     = countOk;
+              summaryStatCached.textContent = countCached;
+              summaryStatErr.textContent    = countErr;
+
+              // Populate failures table
+              importFailuresBody.innerHTML = '';
+              if (failures.length > 0) {
+                importFailuresWrap.style.display = 'block';
+                failures.forEach(f => {
+                  const tr = document.createElement('tr');
+                  tr.innerHTML = `<td>${esc(f.set_number)}</td><td>${esc(f.message || 'Unknown error')}</td>`;
+                  importFailuresBody.appendChild(tr);
+                });
+              } else {
+                importFailuresWrap.style.display = 'none';
+              }
+
+              // Store sets for view button
+              const importedSets = normaliseSets(allSets);
+              importViewBtn.onclick = () => {
+                importSummaryState.style.display = 'none';
+                if (importedSets.length > 0) {
+                  showSetCards(importedSets, importedSets.length > 1, true);
+                } else {
+                  emptyState.style.display = 'flex';
+                }
+                updateClearButton();
+              };
+
+              updateClearButton();
+              break;
+            }
+
+            if (evt.progress != null) {
+              const pct = Math.round((evt.progress / evt.total) * 100);
+              importBigBarFill.style.width = pct + '%';
+              importCounts.textContent     = `${evt.progress} / ${evt.total} sets`;
+
+              if (evt.status === 'ok')     { countOk++;     allSets[evt.set_number] = evt.set; }
+              else if (evt.status === 'cached') { countCached++; allSets[evt.set_number] = evt.set; }
+              else if (evt.status === 'error')  {
+                countErr++;
+                failures.push({ set_number: evt.set_number, message: evt.message });
+              }
+
+              importStatOk.textContent     = countOk;
+              importStatCached.textContent = countCached;
+              importStatErr.textContent    = countErr;
+            }
+          }
+        }
+      } catch (err) {
+        importProgressState.style.display = 'none';
+        showError('❌  Network error: ' + err.message);
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }
+  }
+
+  /* ════════════════════════════════
+     INVENTORY VIEW
+  ════════════════════════════════ */
+  async function loadInventory() {
+    setLoading(true);
+    try {
+      const res  = await fetch('/inventory');
+      const data = await res.json();
+      const sets = normaliseSets(data);
+      if (sets.length === 0) {
+        revealOutput();
+        emptyState.style.display  = 'flex';
+        loadingState.style.display = 'none';
+        outputWrap.classList.remove('visible');
+      } else {
+        showSetCards(sets, sets.length > 1, true);
+      }
+      updateClearButton(sets.length);
+    } catch (err) {
+      showError('❌  Network error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRemove(setNumber, card) {
+    // Optimistic update
+    const badge = card.querySelector('.qty-badge');
+    if (badge) {
+      const cur = parseInt(badge.textContent.replace('×', '')) || 1;
+      if (cur > 2) {
+        badge.textContent = '×' + (cur - 1);
+      } else {
+        badge.remove();
+      }
+    }
+
+    try {
+      const res  = await fetch(`/inventory/${setNumber}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.removed) {
+        card.style.transition = 'opacity 0.3s';
+        card.style.opacity = '0';
+        setTimeout(() => {
+          card.remove();
+          // Check if inventory is now empty
+          if (setCardsScroll.children.length === 0) {
+            outputWrap.classList.remove('visible');
+            emptyState.style.display = 'flex';
+          }
+          updateClearButton();
+        }, 300);
+      }
+    } catch (err) {
+      console.error('Remove failed:', err);
+    }
+  }
+
+  async function handleRefresh(setNumber, card) {
+    try {
+      const res  = await fetch(`/inventory/${setNumber}/refresh`, { method: 'POST' });
+      const data = await res.json();
+      if (data.error) return false;
+      const sets    = normaliseSets({ [setNumber]: data });
+      const newCard = buildSetCard(sets[0], true);
+      card.replaceWith(newCard);
+      return true;
+    } catch (err) {
+      console.error('Refresh failed for', setNumber, err);
+      return false;
+    }
+  }
+
+  /* ════════════════════════════════
+     CLEAR INVENTORY
+  ════════════════════════════════ */
+  const clearModal   = document.getElementById('clear-modal');
+  const clearConfirm = document.getElementById('clear-confirm');
+  const clearCancel  = document.getElementById('clear-cancel');
+  const clearClose   = document.getElementById('clear-modal-close');
+  const clearCount   = document.getElementById('clear-count');
+
+  function updateClearButton(count) {
+    if (count == null) {
+      count = setCardsScroll.querySelectorAll('.set-card').length;
+    }
+    const show = count > 0 && _isInventory;
+    navInventoryIcons.style.display = show ? 'flex' : 'none';
+  }
+
+  navRefreshIcon.addEventListener('click', e => {
+    e.stopPropagation(); // don't trigger nav-inventory click
+    handleRefreshAll();
+  });
+
+  async function handleRefreshAll() {
+    const cards = Array.from(setCardsScroll.querySelectorAll('.set-card'));
+    if (cards.length === 0) return;
+
+    // Show refresh progress panel
+    outputWrap.classList.remove('visible');
+    emptyState.style.display          = 'none';
+    importProgressState.style.display = 'none';
+    importSummaryState.style.display  = 'none';
+    refreshProgressState.style.display = 'flex';
+    refreshProgressTitle.textContent  = `Refreshing ${cards.length} set${cards.length !== 1 ? 's' : ''}…`;
+    refreshBigBarFill.style.width     = '0%';
+    refreshCounts.textContent         = `0 / ${cards.length}`;
+    refreshStatOk.textContent         = '0';
+    refreshStatErr.textContent        = '0';
+
+    navRefreshIcon.style.pointerEvents = 'none';
+    navRefreshIcon.style.opacity       = '0.4';
+
+    let done = 0;
+    let ok   = 0;
+    let err  = 0;
+
+    for (const card of cards) {
+      const setNumber = card.dataset.setNumber;
+      if (!setNumber) { done++; continue; }
+      const success = await handleRefresh(setNumber, card);
+      done++;
+      if (success) ok++; else err++;
+
+      const pct = Math.round((done / cards.length) * 100);
+      refreshBigBarFill.style.width = pct + '%';
+      refreshCounts.textContent     = `${done} / ${cards.length}`;
+      refreshStatOk.textContent     = ok;
+      refreshStatErr.textContent    = err;
+    }
+
+    refreshProgressTitle.textContent   = 'Refresh Complete';
+    navRefreshIcon.style.pointerEvents = '';
+    navRefreshIcon.style.opacity       = '';
+
+    // Return to card view after short delay
+    setTimeout(() => {
+      refreshProgressState.style.display = 'none';
+      outputWrap.classList.add('visible');
+      setCardsBody.style.display = 'flex';
+    }, 1500);
+  }
+
+  navClearIcon.addEventListener('click', e => {
+    e.stopPropagation();
+    const n = setCardsScroll.querySelectorAll('.set-card').length;
+    clearCount.textContent = n + ' set' + (n !== 1 ? 's' : '');
+    clearModal.classList.add('visible');
+  });
+
+  [clearCancel, clearClose].forEach(el =>
+    el.addEventListener('click', () => clearModal.classList.remove('visible'))
+  );
+
+  clearConfirm.addEventListener('click', async () => {
+    clearModal.classList.remove('visible');
+    try {
+      await fetch('/inventory', { method: 'DELETE' });
+      setCardsScroll.innerHTML = '';
+      outputWrap.classList.remove('visible');
+      emptyState.style.display = 'flex';
+      updateClearButton(0);
+    } catch (err) {
+      showError('❌  Clear failed: ' + err.message);
+    }
+  });
+
+
   function formatSaleDate(raw) {
     if (!raw) return '—';
     try {
