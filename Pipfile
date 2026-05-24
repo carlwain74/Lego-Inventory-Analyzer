@@ -12,6 +12,7 @@ bricklink-py = "*"
 openpyxl = "*"
 flask = "*"
 sqlalchemy = "*"
+wheel = ">=0.46.2"
 
 [requires]
 python_version = "3.11"
