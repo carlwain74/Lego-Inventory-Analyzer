@@ -83,10 +83,16 @@ with open(VERSION_FILE) as _vf:
 # via the OUTPUT_DIR env var (used by Docker to write into the mounted volume)
 OUTPUT_DIR = os.environ.get('OUTPUT_DIR', os.path.dirname(__file__))
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# DB_DIR defaults to OUTPUT_DIR locally; overridden via env var in Docker
+# to use a separate named volume for the database
+DB_DIR = os.environ.get('DB_DIR', OUTPUT_DIR)
+os.makedirs(DB_DIR, exist_ok=True)
+
 os.environ.setdefault('CONFIG_PATH', CONFIG_PATH)
 os.environ.setdefault('OUTPUT_DIR',  OUTPUT_DIR)
 
-DB_PATH = os.path.join(OUTPUT_DIR, 'inventory.db')
+DB_PATH = os.path.join(DB_DIR, 'inventory.db')
 init_db(DB_PATH)
 
 app.register_blueprint(inventory_bp)

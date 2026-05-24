@@ -18,8 +18,11 @@ COPY Pipfile Pipfile.lock ./
 RUN pipenv install --system --ignore-pipfile 2>/dev/null || pipenv install --system
 
 # Copy application source
-COPY app.py generate_sheets.py ./
+COPY app.py generate_sheets.py set_handler.py bricklink.py ./
+COPY models.py database.py ./
+COPY routes/ routes/
 COPY templates/ templates/
+COPY VERSION ./
 
 # Expose Flask port
 EXPOSE 5000

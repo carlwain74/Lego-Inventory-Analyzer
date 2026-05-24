@@ -1,55 +1,288 @@
-# central-ops-repo/.github/workflows/dispatcher.yml
-name: CI Dispatcher
-on: workflow_call
+# .github/workflows/main.yml
+name: Code Coverage Checker
+on:
+  pull_request:
+    branches:
+      - '*'
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
-  initialize:
+  detect-languages:
     runs-on: ubuntu-latest
     outputs:
-      lang: ${{ steps.detect.outputs.lang }}
-      ver: ${{ steps.detect.outputs.ver }}
+      has_python: ${{ steps.detect.outputs.has_python }}
+      python_version: ${{ steps.detect.outputs.python_version }}
     steps:
-      - uses: actions/checkout@v4
-
-      - id: detect
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Detect languages and versions
+        id: detect
         run: |
-          if [ -f "pom.xml" ]; then
-            V=$(mvn help:evaluate -Dexpression=maven.compiler.release -q -DforceStdout | grep -v '\[')
-            [[ "$V" == "null" ]] && V=$(mvn help:evaluate -Dexpression=maven.compiler.target -q -DforceStdout | grep -v '\[')
-            echo "lang=maven" >> $GITHUB_OUTPUT
-            echo "ver=${V:-17}" >> $GITHUB_OUTPUT
-          elif [ -f "go.mod" ]; then
-            V=$(grep -E '^go [0-9.]+' go.mod | awk '{print $2}')
-            echo "lang=go" >> $GITHUB_OUTPUT
-            echo "ver=${V:-1.21}" >> $GITHUB_OUTPUT
-          elif [ -f "Pipfile" ] || [ -f "pyproject.toml" ] || [ -f "requirements.txt" ]; then
-            if [ -f "Pipfile" ]; then V=$(grep -oP 'python_version\s*=\s*"\K[^"]+' Pipfile)
-            elif [ -f "pyproject.toml" ]; then V=$(grep -oP 'requires-python\s*=\s*"\D*\K[0-9.]+' pyproject.toml)
+          HAS_PYTHON=false
+          PYTHON_VERSION="3.11"
+
+          if find . \( -name "requirements*.txt" -o -name "setup.py" \
+              -o -name "setup.cfg" -o -name "pyproject.toml" \
+              -o -name "Pipfile" \) \
+             -not -path "*/node_modules/*" -not -path "*/.venv/*" \
+             2>/dev/null | grep -q .; then
+            HAS_PYTHON=true
+            # pyproject.toml: requires-python = ">=3.11"
+            PY_VER=$(grep -h -oP '(?<=requires-python\s=\s")[^"]+|(?<=python_requires\s=\s")[^"]+' \
+              $(find . \( -name "pyproject.toml" -o -name "setup.cfg" -o -name "setup.py" \) \
+                -not -path "*/.venv/*" 2>/dev/null) 2>/dev/null \
+              | grep -oP '\d+\.\d+' | head -1)
+            # .python-version file takes priority
+            if [ -f ".python-version" ]; then
+              PY_VER=$(cat .python-version | tr -d '[:space:]')
             fi
-            echo "lang=python" >> $GITHUB_OUTPUT
-            echo "ver=${V:-3.10}" >> $GITHUB_OUTPUT
+            [ -n "$PY_VER" ] && PYTHON_VERSION="$PY_VER"
           fi
 
-  maven:
-    needs: initialize
-    if: needs.initialize.outputs.lang == 'maven'
-    uses: ./.github/workflows/sub-maven.yml
-    with: 
-      user: ${{ needs.initialize.outputs.user }}
-      ver: ${{ needs.initialize.outputs.ver }}
+          echo "has_python=$HAS_PYTHON"     >> "$GITHUB_OUTPUT"
+          echo "python_version=$PYTHON_VERSION" >> "$GITHUB_OUTPUT"
 
-  python:
-    needs: initialize
-    if: needs.initialize.outputs.lang == 'python'
-    uses: ./.github/workflows/sub-python.yml
-    with:
-      user: ${{ needs.initialize.outputs.user }}
-      ver: ${{ needs.initialize.outputs.ver }}
+          echo "──────────── Detection Results ────────────"
+          echo "Python : $HAS_PYTHON (v$PYTHON_VERSION)"
 
-  go:
-    needs: initialize
-    if: needs.initialize.outputs.lang == 'go'
-    uses: ./.github/workflows/sub-go.yml
-    with:
-      user: ${{ needs.initialize.outputs.user }}
-      ver: ${{ needs.initialize.outputs.ver }}
+  #maven:
+  #  needs: initialize
+  #  if: needs.initialize.outputs.lang == 'maven'
+  #  uses: ./.github/workflows/sub-maven.yml
+  #  with: 
+  #    user: ${{ needs.initialize.outputs.user }}
+  #    ver: ${{ needs.initialize.outputs.ver }}
+
+  # python:
+  #   needs: initialize
+  #   if: needs.initialize.outputs.lang == 'python'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: checkout code
+  #       uses: actions/checkout@v4
+  #     - name: coverage check
+  #       uses: actions/setup-python@v5
+  #       with: 
+  #         python-version: ${{ needs.initialize.outputs.ver }}
+  #     - name: Install & Test
+  #       run: |
+  #           pip install pipenv
+  #           pipenv sync --dev
+  #           pipenv run pytest --cov=./ --cov-report=xml --cov-fail-under=80
+  #     - name: Pytest coverage comment
+  #       id: coverage
+  #       uses: MishaKav/pytest-coverage-comment@v1.7.2
+  #       with:
+  #         pytest-xml-coverage-path: ./coverage.xml
+  #         title: "Python Coverage"
+  #     - name: Fail if coverage below 80
+  #       if: ${{ steps.coverage.outputs.coverage < 80 }}
+  #       run: |
+  #         echo "Coverage is below 80%!"
+  #         exit 1
+
+  python-coverage:
+    name: Python Coverage
+    needs: detect-languages
+    if: needs.detect-languages.outputs.has_python == 'true'
+    runs-on: ubuntu-latest
+    env:
+      COVERAGE_THRESHOLD: 80
+    outputs:
+      coverage:       ${{ steps.parse.outputs.coverage }}
+      passed:         ${{ steps.parse.outputs.passed }}
+      coverage_table: ${{ steps.parse.outputs.coverage_table }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with: 
+          python-version: ${{ needs.detect-languages.outputs.python_version }}
+      - name: Coverage Check Report
+        run: |
+          pip install pipenv
+          pipenv sync --dev
+          pipenv run pytest --cov=./ --cov-report=xml --cov-fail-under=80
+      #- name: Pytest coverage comment
+      #  id: coverage
+      #  uses: MishaKav/pytest-coverage-comment@v1.7.2
+      #  with:
+      #    pytest-xml-coverage-path: ./coverage.xml
+      #    title: "Python Coverage"
+
+      - name: Parse Python coverage XML
+        id: parse
+        env:
+          REPO_URL:   ${{ github.server_url }}/${{ github.repository }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 - coverage.xml "$COVERAGE_THRESHOLD" "$REPO_URL" "$COMMIT_SHA" <<'PYEOF'
+          import sys, xml.etree.ElementTree as ET, os
+ 
+          report_path, threshold, repo_url, sha = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4]
+          tree = ET.parse(report_path)
+          root = tree.getroot()
+ 
+          overall_pct = float(root.get('line-rate', 0)) * 100
+ 
+          rows = []
+          for pkg in root.findall('.//package'):
+              for cls in pkg.findall('.//class'):
+                  fname = cls.get('filename', '')
+                  # Strip leading ./ if present
+                  clean = fname.lstrip('./')
+                  link = f"{repo_url}/blob/{sha}/{clean}" if clean else None
+                  line_rate = float(cls.get('line-rate', 0))
+                  pct = round(line_rate * 100, 1)
+                  status = '✅' if pct >= threshold else '❌'
+                  rows.append((clean, pct, status, link))
+ 
+          passed = round(overall_pct, 1) >= threshold
+ 
+          table_lines = ['| File | Line Coverage | Status |',
+                         '|------|---------------|--------|']
+          for fname, pct, st, link in rows:
+              file_cell = f'[`{fname}`]({link})' if link else f'`{fname}`'
+              table_lines.append(f'| {file_cell} | {pct}% | {st} |')
+          table = '\n'.join(table_lines)
+ 
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"coverage={round(overall_pct, 1)}\n")
+              f.write(f"passed={'true' if passed else 'false'}\n")
+              escaped = table.replace('%', '%25').replace('\n', '%0A').replace('\r', '%0D')
+              f.write(f"coverage_table={escaped}\n")
+ 
+          print(f"Overall Python coverage: {round(overall_pct,1)}%  passed={passed}")
+          PYEOF
+
+
+  #go:
+  #  needs: initialize
+  #  if: needs.initialize.outputs.lang == 'go'
+  #  uses: ./.github/workflows/sub-go.yml
+  #  with:
+  #    user: ${{ needs.initialize.outputs.user }}
+  #    ver: ${{ needs.initialize.outputs.ver }}
+
+
+  coverage-report:
+    name: Coverage Report & Gate
+    needs:
+      - detect-languages
+      - python-coverage
+    # Always run so the comment is posted even when coverage jobs are skipped
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post PR comment for detected language
+        uses: actions/github-script@v7
+        env:
+          THRESHOLD: "80"
+          PY_ENABLED:    ${{ needs.detect-languages.outputs.has_python }}
+          PY_VERSION:    ${{ needs.detect-languages.outputs.python_version }}
+          PY_COVERAGE:   ${{ needs.python-coverage.outputs.coverage }}
+          PY_PASSED:     ${{ needs.python-coverage.outputs.passed }}
+          PY_TABLE:      ${{ needs.python-coverage.outputs.coverage_table }}
+        with:
+          script: |
+            const threshold = parseInt(process.env.THRESHOLD);
+
+            // Resolve the single detected language for this PR
+            let lang;
+            if (process.env.PY_ENABLED === 'true') {
+              lang = {
+                name:     'Python',
+                icon:     '🐍',
+                version:  process.env.PY_VERSION,
+                coverage: parseFloat(process.env.PY_COVERAGE || '0'),
+                passed:   process.env.PY_PASSED === 'true',
+                table:    decodeURIComponent(process.env.PY_TABLE || ''),
+              };
+            }
+
+            // ── Build comment body ──────────────────────────────────────────
+            const marker = '<!-- coverage-report-comment -->';
+            let body = marker + '\n';
+
+            if (!lang) {
+              body += `## ⚠️ Code Coverage — No Supported Language Detected\n\n`;
+              body += `No Python project files were found in this PR.\n`;
+            } else {
+              const icon       = lang.passed ? '✅' : '❌';
+              const statusText = lang.passed ? 'PASSED' : 'FAILED';
+              const bar        = buildBar(lang.coverage);
+    
+              body += `## ${icon} Code Coverage — ${statusText}\n\n`;
+              body += `| | |\n|---|---|\n`;
+              body += `| **Language** | ${lang.icon} ${lang.name} ${lang.version} |\n`;
+              body += `| **Coverage** | **${lang.coverage}%** ${bar} |\n`;
+              body += `| **Threshold** | ${threshold}% |\n`;
+              body += `| **Status** | ${icon} ${statusText} |\n\n`;
+
+              // Per-file breakdown
+              body += `<details>\n<summary><strong>File / Module Breakdown</strong></summary>\n\n`;
+              if (lang.table) {
+                body += lang.table + '\n';
+                body += `\n</details>\n`;
+              } else {
+                body += '_No per-file breakdown available._\n';
+              }
+
+              if (!lang.passed) {
+                body += `\n> ⚠️ Coverage is below the **${threshold}%** threshold. `;
+                body += `Please add tests to the files marked ❌ above and push again.\n`;
+              } else {
+                body += `\n> ⚠️ Coverage is above the **${threshold}%** threshold. `;
+                body += `\nIf any tests are marked ❌ above either add coverage or exclude them.\n`;
+              }
+            }
+
+            body += `\n---\n_Generated by [Code Coverage Action](https://github.com/${context.repo.owner}/${context.repo.repo}/actions) · ${new Date().toUTCString()}_`;
+
+            // ── Upsert: update existing comment or create a new one ─────────
+            const { data: comments } = await github.rest.issues.listComments({
+              owner:        context.repo.owner,
+              repo:         context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+            });
+
+            const existing = comments.find(c => c.body.startsWith(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner:      context.repo.owner,
+                repo:       context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner:        context.repo.owner,
+                repo:         context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body,
+              });
+            }
+
+            function buildBar(pct) {
+              const filled = Math.round(pct / 10);
+              return '`' + '█'.repeat(filled) + '░'.repeat(10 - filled) + '`';
+            }
+
+      # ── Enforce the gate — fails the check and blocks the PR merge ─────────
+      - name: Enforce coverage gate
+        env:
+          PY_ENABLED:   ${{ needs.detect-languages.outputs.has_python }}
+          PY_PASSED:    ${{ needs.python-coverage.outputs.passed }}
+        run: |
+          if [ "$PY_ENABLED"   = "true" ] && [ "$PY_PASSED"   != "true" ]; then
+            echo "❌  Python coverage is below the 80% threshold. Add tests and push again."
+            exit 1
+          else
+            echo "✅  Coverage gate passed."
+          fi

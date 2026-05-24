@@ -6,4 +6,3 @@ venv*
 config.ini
 test_ui/node_modules
 .coverage
-foo

@@ -1,0 +1,25 @@
+on:
+  workflow_call:
+    inputs: { user: { required: true, type: string }, ver: { required: true, type: string } }
+    secrets: { token: { required: true } }
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: ${{ inputs.ver }}
+          distribution: 'temurin'
+          server-id: artifactory
+          server-username: U
+          server-password: T
+        env: 
+          U: ${{ inputs.user }}
+          T: ${{ secrets.token }}
+      - run: mvn clean verify
+      - uses: madrapps/jacoco-report@v1.7.1
+        with:
+          paths: '**/target/site/jacoco/jacoco.xml'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          min-coverage-overall: 80
