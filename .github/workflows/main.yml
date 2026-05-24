@@ -22,7 +22,7 @@ jobs:
         id: detect
         run: |
           HAS_PYTHON=false
-          PYTHON_VERSION="3.11"
+          PYTHON_VERSION="3.14"
 
           if find . \( -name "requirements*.txt" -o -name "setup.py" \
               -o -name "setup.cfg" -o -name "pyproject.toml" \
