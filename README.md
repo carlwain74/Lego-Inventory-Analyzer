@@ -1,6 +1,8 @@
 # 🧱 Lego Inventory — Set Price Analyzer
 
-A local web application for analysing Bricklink marketplace pricing data across Lego sets. Given a set number or a list of sets, it queries the Bricklink API and presents current and historical sale data in a clean, filterable card interface.
+A local web application for analysing Bricklink marketplace pricing data across
+Lego sets. Look up individual sets or import a collection into a persistent
+inventory, with live price data fetched from the Bricklink API.
 
 ---
 
@@ -20,28 +22,43 @@ A local web application for analysing Bricklink marketplace pricing data across 
 
 ## Project Description
 
-Lego Inventory connects to the [Bricklink](https://www.bricklink.com) marketplace API to retrieve pricing data for one or more Lego sets and renders it as an interactive dashboard.
+Lego Inventory connects to the [Bricklink](https://www.bricklink.com)
+marketplace API to retrieve pricing data for one or more Lego sets and renders
+it as an interactive dashboard.
 
 ### Key features
 
-- **Single set lookup** — enter a set number (e.g. `75192-1`) and instantly retrieve pricing
-- **Batch processing** — upload a `.txt` or `.list` file containing multiple set numbers to analyse them all at once
-- **Current & past sales** — each set card displays separate pricing rows for items currently for sale and historical sold listings
-- **Sale value estimate** — a calculated recommended sale price derived from the average of the current avg and max prices
-- **Category filtering** — filter a batch result set by category with live chip-based controls
+- **Check Prices** — enter a set number or upload a file of set numbers to
+  retrieve live Bricklink pricing without saving to the database
+- **Import to inventory** — single set or bulk file import saves sets to a
+  local SQLite database; re-importing increments quantity
+- **Inventory management** — browse your full inventory with live category
+  chips and a search box; remove individual sets or clear all
+- **Refresh prices** — refresh all inventory prices in one click; progress
+  shown in an animated right-panel view
+- **Current & past sales** — each set card displays separate pricing rows for
+  items currently for sale and historical sold listings
+- **Sale value estimate** — recommended sale price derived from the average of
+  the current avg and max prices
+- **Bulk import progress** — SSE-streamed progress panel shows imported,
+  cached, and failed counts in real time; post-import summary with failure
+  reasons
 - **Thumbnail previews** — hover over a set image to see a full-size popup
-- **API settings dialog** — manage Bricklink OAuth credentials through a built-in settings panel without touching config files manually
+- **API settings dialog** — manage Bricklink OAuth credentials through a
+  built-in settings panel without touching config files manually
 - **XLSX export** — download the full results as a formatted spreadsheet
 
 ### Tech stack
 
 | Layer | Technology |
 |---|---|
-| Backend | Python 3.11 · Flask · bricklink-py · openpyxl |
+| Backend | Python 3.14 · Flask · SQLAlchemy · bricklink-py · openpyxl |
+| Database | SQLite (via SQLAlchemy) |
 | Frontend | Vanilla JS · CSS custom properties · HTML5 |
 | Testing (Python) | pytest · pytest-cov |
 | Testing (JS) | Jest · jest-environment-jsdom |
 | Dependency management | Pipenv (Python) · npm (JS) |
+| Container | Docker · Docker Compose · gunicorn |
 
 ---
 
@@ -49,36 +66,52 @@ Lego Inventory connects to the [Bricklink](https://www.bricklink.com) marketplac
 
 ```
 .
-├── app.py                  # Flask application and API routes
-├── generate_sheets.py      # Bricklink API integration, sheet generation and sale date utility
-├── config.ini.template     # Credentials template (committed)
-├── config.ini              # Bricklink API credentials (not committed to git)
-├── Pipfile                 # Python dependencies
+├── app.py                    # Flask application, route registration, DB init
+├── database.py               # SQLAlchemy engine, session, upsert helpers
+├── models.py                 # SQLAlchemy models — Set, SetPrice, Inventory
+├── set_handler.py            # SetHandler class — wraps Bricklink API calls
+├── bricklink.py              # BrickLinkAPI — low-level API client
+├── generate_sheets.py        # XLSX generation
+├── config.ini.template       # Credentials template (committed)
+├── config.ini                # Bricklink API credentials (not committed)
+├── VERSION                   # Current version string
+├── Pipfile                   # Python dependencies
 ├── Pipfile.lock
-├── .coveragerc             # Coverage configuration
-├── run_tests.sh            # Wrapper script to run all test suites
-├── Dockerfile              # Container image definition
-├── docker-compose.yml      # Docker Compose service configuration
-├── .dockerignore           # Files excluded from the Docker build context
-├── templates/
-│   └── index.html          # Single-page frontend
-├── tests/
+├── .coveragerc               # Coverage configuration
+├── run_tests.sh              # Wrapper script to run all test suites
+├── scripts/
+│   ├── release.sh            # Build, tag, and push image to Docker Hub
+│   └── docker-push.md        # Detailed push guide
+├── Dockerfile                # Container image definition
+├── docker-compose.yml        # Docker Compose service configuration
+├── .dockerignore             # Files excluded from the Docker build context
+├── routes/
 │   ├── __init__.py
-│   ├── conftest.py         # pytest shared fixtures and stubs
-│   └── test_app.py         # pytest suite for Flask routes
-└── test_ui/
-    ├── package.json        # JS test dependencies (Jest)
-    └── test_ui.js          # Jest suite for frontend JS functions
+│   ├── inventory.py          # GET/DELETE /inventory, POST /inventory/<n>/refresh
+│   └── import_routes.py      # POST /inventory/import, POST /inventory/import/bulk
+├── templates/
+│   └── index.html            # Single-page frontend
+└── tests/
+    ├── __init__.py
+    ├── conftest.py           # pytest shared fixtures and module stubs
+    ├── test_app.py           # Flask route tests (/, /generate, /settings, /download)
+    ├── test_bricklink.py     # BrickLinkAPI unit tests
+    ├── test_database.py      # database helper tests (init_db, upsert, set_to_dict)
+    ├── test_inventory_routes.py  # Inventory and import blueprint tests
+    ├── test_models.py        # SQLAlchemy model tests
+    ├── test_set_handler.py   # SetHandler unit tests
+    └── test_ui.js            # Jest suite for frontend JS functions
 ```
 
 ---
 
 ## Prerequisites
 
-- **Python 3.11+**
+- **Python 3.14+**
 - **Pipenv** — `pip install pipenv`
 - **Node.js 18+** and **npm** — [nodejs.org](https://nodejs.org)
-- A Bricklink account with API credentials ([register here](https://www.bricklink.com/v3/api.page))
+- A Bricklink account with API credentials
+  ([register here](https://www.bricklink.com/v3/api.page))
 
 ---
 
@@ -92,13 +125,12 @@ pipenv install
 
 ### 2. Configure Bricklink API credentials
 
-Copy the provided template and fill in your credentials:
-
 ```bash
 cp config.ini.template config.ini
 ```
 
-Then open `config.ini` and fill in your credentials, or use the in-app settings dialog (see [Configuration](#configuration)).
+Open `config.ini` and fill in your credentials, or use the in-app settings
+dialog (see [Configuration](#configuration)).
 
 ### 3. Start the server
 
@@ -110,80 +142,38 @@ The app will be available at **http://localhost:5000**.
 
 ### 4. Use the app
 
-- **Single set** — select *Set Number*, type a set number (the `-1` suffix is added automatically), and click *Generate*
-- **Batch** — select *Set List File*, upload a `.txt` or `.list` file with one set number per line, and click *Generate*
-- **Export** — after a batch run, click *⬇ Download Sets.xlsx* in the summary bar
+**Check Prices**
+- Select *Single Set Number*, type a set number (the `-1` suffix is added
+  automatically), and click *Check Prices*
+- Select *File List* to upload a `.txt` or `.list` file with one set number
+  per line
 
-### 5. Run backend direct
+**Import Sets**
+- Switch to *Import Sets* in the sidebar
+- Import a single set or upload a bulk file — sets are saved to the local
+  database and quantity is incremented on re-import
 
-There are two modes; Printing details about a single set `-s` or multiple sets `-f`.
-
-Single set option will take presedence over multiple sets
-
-```
-usage: app.py [-h] [-s SET] [-f FILE] [-m MULTI] [-v] [-o OUTPUT]
-
-options:
-  -h, --help            show this help message and exit
-  -s SET, --set SET
-  -f FILE, --file FILE
-  -m MULTI, --multi MULTI
-  -v, --verbose
-  -o OUTPUT, --output OUTPUT
-```
-#### Single set
-
-```
-pipenv run python inventory.py -s 40158
-2021-11-11 19:16:48 INFO     Item: 40158
-2021-11-11 19:16:48 INFO       Name: Pirates Chess Set, Pirates III
-2021-11-11 19:16:48 INFO       Category: Game
-2021-11-11 19:16:48 INFO       Avg Price: 102 USD
-2021-11-11 19:16:48 INFO       Max Price: 150 USD
-2021-11-11 19:16:48 INFO       Min Price: 84 USD
-2021-11-11 19:16:48 INFO       Quantity avail: 16
-```
-
-#### Multiple Sets
-
-You need to create a text file with a list of sets as follows. Script will generate a default file `Sets.xlsx` with a single sheet with all sets it was able to process
-```
-21036-1
-41585-1
-```
-Then include the filename instead of a set.
-```
-pipenv run python inventory.py -f test.txt
-2021-11-11 19:18:42 INFO     Processing sets in test.txt
-2021-11-11 19:18:44 INFO     Item: 21036-1
-2021-11-11 19:18:44 INFO       Name: Arc De Triomphe
-2021-11-11 19:18:44 INFO       Category: Architecture
-2021-11-11 19:18:44 INFO       Avg Price: 91 USD
-2021-11-11 19:18:44 INFO       Max Price: 99 USD
-2021-11-11 19:18:44 INFO       Min Price: 75 USD
-2021-11-11 19:18:44 INFO       Quantity avail: 17
-2021-11-11 19:18:45 INFO     Item: 41585-1
-2021-11-11 19:18:45 INFO       Name: Batman
-2021-11-11 19:18:45 INFO       Category: BrickHeadz
-2021-11-11 19:18:45 INFO       Avg Price: 45 USD
-2021-11-11 19:18:45 INFO       Max Price: 65 USD
-2021-11-11 19:18:45 INFO       Min Price: 34 USD
-2021-11-11 19:18:45 INFO       Quantity avail: 13
-2021-11-11 19:18:45 INFO     Total: 136USD
-```
+**My Inventory**
+- Click *My Inventory* to browse all imported sets
+- Use category chips and the search box to filter
+- Click ↻ to refresh all prices, 🗑 to clear the inventory
+- Click *✕ Remove* on a card to decrement its quantity
 
 ---
 
 ## Configuration
 
-Bricklink API credentials are stored in `config.ini` in the project root. They can be updated at any time without restarting the server using the in-app settings panel:
+Bricklink API credentials are stored in `config.ini` in the project root.
+They can be updated at any time without restarting the server using the in-app
+settings panel:
 
-1. Click the **⚙ cogwheel** icon next to the *Configure* heading in the sidebar
+1. Click the **⚙ cogwheel** icon in the sidebar
 2. Enter new values for any of the four credential fields
 3. Use **Test Connection** to verify credentials before saving
 4. Click **Save Settings** — changes take effect immediately
 
-> **Security note:** `config.ini` contains sensitive credentials and should never be committed to version control. Ensure it is listed in `.gitignore`.
+> **Security note:** `config.ini` contains sensitive credentials and should
+> never be committed to version control. Ensure it is listed in `.gitignore`.
 
 ```gitignore
 config.ini
@@ -193,20 +183,23 @@ config.ini
 
 ## Local Network Access
 
-The app binds to `0.0.0.0:5000` by default, making it reachable from other devices on your local network via your machine's IP address (e.g. `http://192.168.1.42:5000`).
+The app binds to `0.0.0.0:5000` by default, making it reachable from other
+devices on your local network via your machine's IP address
+(e.g. `http://192.168.1.42:5000`).
 
-To access it via a friendly hostname (e.g. `http://legoinventory.local`) across your LAN, see the included setup guides:
+To access it via a friendly hostname (e.g. `http://legoinventory.local`)
+across your LAN, see the included setup guides:
 
-- **`dnsmasq-setup.md`** — recommended: runs a lightweight DNS server on your Mac, no per-device config needed
-- **`caddy-setup.md`** — alternative: reverse proxy to remove the port number from the URL (requires a newer macOS)
+- **`dnsmasq-setup.md`** — recommended: runs a lightweight DNS server on your
+  Mac, no per-device config needed
+- **`caddy-setup.md`** — alternative: reverse proxy to remove the port number
+  from the URL
 
 ---
 
 ## How to Test
 
 ### Run all test suites
-
-A single wrapper script runs both the Python and JavaScript suites, syncs dependencies first, and reports a coverage summary:
 
 ```bash
 ./run_tests.sh
@@ -223,7 +216,6 @@ The script will:
 
 **Python (pytest):**
 ```bash
-pipenv sync --dev
 pipenv run pytest tests/ -v
 ```
 
@@ -238,25 +230,45 @@ pipenv run pytest tests/ -v \
 
 **JavaScript (Jest):**
 ```bash
-cd test_ui
+cd tests
 npm install
 npm test
 ```
 
 ### What is tested
 
-| Suite | File | Coverage |
+| Suite | File | Tests |
 |---|---|---|
-| Flask routes (`/`, `/generate`, `/settings`, `/settings/test`, `/download`) | `tests/test_app.py` | 48 tests |
-| `capture_output` logging capture | `tests/test_app.py` | 5 tests |
-| JS parser (`parseAllSets`) | `test_ui/test_ui.js` | 28 tests |
-| JS helpers (`formatPrice`, `formatSaleDate`, `calcSaleValue`, `esc`) | `test_ui/test_ui.js` | 30 tests |
+| Flask routes (`/`, `/generate`, `/settings`, `/download`) | `test_app.py` | 44 |
+| BrickLinkAPI client | `test_bricklink.py` | 36 |
+| Database helpers (`init_db`, `upsert_set`, `set_to_dict` etc.) | `test_database.py` | 27 |
+| Inventory & import routes | `test_inventory_routes.py` | 30 |
+| SQLAlchemy models | `test_models.py` | 15 |
+| SetHandler | `test_set_handler.py` | 24 |
+| Frontend JS (`normaliseSets`, `formatPrice`, `formatSaleDate`, `calcSaleValue`, `esc`) | `test_ui.js` | 59 |
+
+---
+
+## API Routes
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/` | Serves the single-page frontend |
+| `POST` | `/generate` | Check prices (no DB write) |
+| `GET` | `/settings` | Read current credentials |
+| `POST` | `/settings` | Save credentials to config.ini |
+| `POST` | `/settings/test` | Test Bricklink API connection |
+| `GET` | `/download` | Download Sets.xlsx |
+| `GET` | `/inventory` | Return full inventory as JSON |
+| `DELETE` | `/inventory` | Clear all inventory rows |
+| `DELETE` | `/inventory/<set_number>` | Decrement or remove a set |
+| `POST` | `/inventory/<set_number>/refresh` | Refresh price data for one set |
+| `POST` | `/inventory/import` | Import a single set |
+| `POST` | `/inventory/import/bulk` | Bulk import via SSE stream |
 
 ---
 
 ## How to Contribute
-
-Contributions are welcome. Please follow the process below to keep the codebase consistent and the review process smooth.
 
 ### 1. Fork and clone
 
@@ -267,82 +279,62 @@ cd bricklink
 
 ### 2. Create a feature branch
 
-Branch names should be short and descriptive, prefixed by type:
-
 ```bash
 git checkout -b feature/my-new-feature
 # or
 git checkout -b fix/bug-description
-# or
-git checkout -b chore/update-dependencies
 ```
 
 ### 3. Make your changes
 
 - Keep changes focused — one feature or fix per PR
-- Follow the existing code style (no external linters are enforced, but consistency matters)
-- If adding a new Flask route, add corresponding tests in `tests/test_app.py`
-- If adding or modifying a JS function in `index.html`, add corresponding tests in `test_ui/test_ui.js`
-- Do not commit `config.ini`, `coverage_html/`, `__pycache__/`, or `node_modules/`
+- Follow the existing code style
+- Add tests for any new Flask route in `tests/test_app.py` or
+  `tests/test_inventory_routes.py`
+- Add tests for any new JS function in `tests/test_ui.js`
+- Do not commit `config.ini`, `coverage_html/`, `__pycache__/`,
+  `node_modules/`, or `inventory.db`
 
 ### 4. Run the test suite
-
-All tests must pass and coverage must remain at or above **90%** before submitting:
 
 ```bash
 ./run_tests.sh
 ```
 
-### 5. Commit your changes
+All tests must pass and coverage must remain at or above **90%**.
 
-Write clear, imperative commit messages:
+### 5. Commit and push
 
 ```bash
 git add .
 git commit -m "Add last sale date to past sales card"
-```
-
-### 6. Push and open a Pull Request
-
-```bash
 git push origin feature/my-new-feature
 ```
 
-Then open a Pull Request against the `main` branch on GitHub. In the PR description include:
-
-- **What** the change does
-- **Why** it's needed
-- Any **screenshots** if the change affects the UI
-- Confirmation that `./run_tests.sh` passes
-
-### 7. Code review
-
-PRs require at least one approving review before merging. Address any feedback with additional commits on the same branch — do not force-push after a review has started.
+Open a Pull Request against `main`. Include what the change does, why it's
+needed, screenshots if the UI is affected, and confirmation that
+`./run_tests.sh` passes.
 
 ---
 
 ## Docker
 
-The app can be run in a container using Docker Compose. The container will automatically restart if the app crashes (`restart: on-failure`).
-
 ### Prerequisites
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (includes Docker Compose)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
-### 1. Create a config.ini
+### Running with Docker Compose
 
-The container expects `config.ini` to exist in the project root before starting — it is mounted as a volume rather than baked into the image so credentials are never embedded in the image layer.
-
-Copy the template and fill in your credentials:
+#### 1. Create config.ini
 
 ```bash
 cp config.ini.template config.ini
 ```
 
-### 2. Build and start
+#### 2. Start
 
 ```bash
-docker compose up --build
+docker compose up
 ```
 
 The app will be available at **http://localhost:5000**.
@@ -350,35 +342,62 @@ The app will be available at **http://localhost:5000**.
 To run in the background:
 
 ```bash
-docker compose up --build -d
+docker compose up -d
 ```
 
-### 3. Stop the container
+#### 3. Stop
 
 ```bash
 docker compose down
 ```
 
-### Generated files
+### Volumes
 
-`Sets.xlsx` is written to an `output/` directory that is mounted as a volume, so generated files persist between container restarts and are accessible on your host machine.
+| Volume | Mount | Contents |
+|---|---|---|
+| `db` | `/app/db` | `inventory.db` — persists between restarts |
+| `output` | `/app/output` | `Sets.xlsx` — generated export files |
+| `./config.ini` | `/app/config.ini` | Bind mount, read-only |
 
-### Rebuilding after code changes
+The database and generated files are stored in separate named volumes so they
+persist across container restarts and can be backed up independently.
+
+### Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `OUTPUT_DIR` | `/app/output` | Where Sets.xlsx is written |
+| `DB_DIR` | `/app/db` | Where inventory.db is stored |
+
+### Building and pushing to Docker Hub
+
+Use the included `scripts/release.sh` script. It resolves the version from a CLI
+argument, git tag, or `VERSION` file; builds and tags the image; pushes both
+the versioned tag and `latest`; and verifies the tags exist on Docker Hub.
 
 ```bash
-docker compose up --build
+# Set your Docker Hub PAT (Read & Write scope)
+export DOCKER_HUB_TOKEN=your_token_here
+
+# Push a specific version
+./scripts/release.sh 0.6
+
+# Or let the script resolve the version from the latest git tag
+./scripts/release.sh
 ```
 
-Docker will only rebuild layers that have changed. Dependency installation is cached as a separate layer so it is only re-run when `Pipfile` or `Pipfile.lock` changes.
+See `scripts/docker-push.md` for full details including tag immutability configuration.
 
 ### Notes
 
-- The container runs **gunicorn** (2 workers, 120s timeout) rather than Flask's built-in dev server for better stability
-- `config.ini` and `output/` are mounted as volumes and are never baked into the image
-- Dev dependencies (`pytest`, `pytest-cov`) are excluded from the image — only production packages are installed
+- The container runs **gunicorn** (2 workers, 120s timeout) rather than
+  Flask's built-in dev server
+- `config.ini` is mounted read-only and is never baked into the image
+- Dev dependencies (`pytest`, `pytest-cov`) are excluded from the image
 
 ---
 
 ## Licence
 
-This project is for personal use. Contact the repository owner for licensing enquiries.
+This project is for personal use. Contact the repository owner for licensing
+enquiries.
