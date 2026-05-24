@@ -94,11 +94,14 @@ echo ""
 
 # ── Login ─────────────────────────────────────────────────────────────────────
 info "Logging in to Docker Hub…"
-LOGIN_OUTPUT=$(echo "$DOCKER_HUB_TOKEN" | docker login --username "$DOCKER_USER" --password-stdin 2>&1)
-LOGIN_EXIT=$?
 
-if [[ $LOGIN_EXIT -ne 0 ]] || ! echo "$LOGIN_OUTPUT" | grep -q "Login Succeeded"; then
-  echo "$LOGIN_OUTPUT" >&2
+# Write token to a temp file to avoid subshell stdin issues on macOS
+DOCKER_CONFIG_TMP=$(mktemp)
+trap 'rm -f "$DOCKER_CONFIG_TMP"' EXIT
+
+echo "$DOCKER_HUB_TOKEN" > "$DOCKER_CONFIG_TMP"
+
+if ! docker login --username "$DOCKER_USER" --password-stdin < "$DOCKER_CONFIG_TMP"; then
   error "Docker Hub login failed. Check your DOCKER_HUB_TOKEN and username."
 fi
 success "Logged in."
@@ -112,33 +115,76 @@ docker build \
 success "Build complete."
 
 # ── Push ──────────────────────────────────────────────────────────────────────
-info "Pushing ${IMAGE}:${VERSION}…"
-docker push "${IMAGE}:${VERSION}"
-success "Pushed ${VERSION}."
+push_tag() {
+  local tag="$1"
+  local exit_code
+  info "Pushing ${IMAGE}:${tag}…"
+  set +e
+  docker push "${IMAGE}:${tag}"
+  exit_code=$?
+  set -e
+  if [[ $exit_code -ne 0 ]]; then
+    error "Push failed for ${IMAGE}:${tag} (exit code ${exit_code}).
 
-info "Pushing ${IMAGE}:latest…"
-docker push "${IMAGE}:latest"
-success "Pushed latest."
+  Possible causes:
+    - PAT does not have Read & Write scope
+    - PAT has expired
+    - Repository does not exist on Docker Hub
+
+  Regenerate your token at: https://hub.docker.com/settings/security
+  Ensure 'Read & Write' access is selected."
+  fi
+  success "Pushed ${tag}."
+}
+
+push_tag "$VERSION"
+push_tag "latest"
 
 # ── Verify pushed tags via Docker Hub API ────────────────────────────────────
 info "Verifying pushed tags on Docker Hub…"
 
-verify_tag() {
-  local tag="$1"
-  local url="https://hub.docker.com/v2/repositories/${IMAGE}/tags/${tag}/"
-  local http_status
-  http_status=$(curl -s -o /dev/null -w "%{http_code}"     -H "Authorization: Bearer ${DOCKER_HUB_TOKEN}"     "$url")
-  if [[ "$http_status" == "200" ]]; then
-    success "Verified ${IMAGE}:${tag} on Docker Hub."
-  else
-    warn "Could not verify ${IMAGE}:${tag} (HTTP ${http_status}). Check https://hub.docker.com/r/${IMAGE}/tags manually."
-  fi
-}
+# Use python3 to POST the login request safely — avoids shell quoting issues
+# with the JSON payload when building it via curl -d
+HUB_JWT=$(python3 - "$DOCKER_USER" "$DOCKER_HUB_TOKEN" << 'PYEOF'
+import sys, json, urllib.request
+user, token = sys.argv[1], sys.argv[2]
+payload = json.dumps({"username": user, "password": token}).encode()
+req = urllib.request.Request(
+    "https://hub.docker.com/v2/users/login",
+    data=payload,
+    headers={"Content-Type": "application/json"},
+    method="POST"
+)
+try:
+    with urllib.request.urlopen(req) as r:
+        data = json.loads(r.read().decode())
+        print(data.get("token", ""))
+except Exception:
+    print("")
+PYEOF
+)
 
-verify_tag "$VERSION"
-verify_tag "latest"
+if [[ -z "$HUB_JWT" ]]; then
+  warn "Could not obtain Docker Hub JWT for verification. Skipping tag checks."
+else
+  verify_tag() {
+    local tag="$1"
+    local url="https://hub.docker.com/v2/repositories/${IMAGE}/tags/${tag}/"
+    local http_status
+    http_status=$(curl -s -o /dev/null -w "%{http_code}" \
+      -H "Authorization: JWT ${HUB_JWT}" \
+      "$url")
+    if [[ "$http_status" == "200" ]]; then
+      success "Verified ${IMAGE}:${tag} on Docker Hub."
+    else
+      warn "Could not verify ${IMAGE}:${tag} (HTTP ${http_status}). Check https://hub.docker.com/r/${IMAGE}/tags manually."
+    fi
+  }
 
-# ── Logout ────────────────────────────────────────────────────────────────────
+  verify_tag "$VERSION"
+  verify_tag "latest"
+fi
+
 docker logout > /dev/null 2>&1
 success "Logged out."
 
