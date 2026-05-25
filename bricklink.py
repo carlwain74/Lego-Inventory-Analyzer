@@ -142,6 +142,11 @@ class BrickLinkAPI:
         self.sets[set_number]['category'] = h_parse.unescape(category_data['category_name'])
 
 
+    def testConnection(self):
+        logging.info(f"Testing connection")
+        category = self.session.category.get_category(1)
+        return category
+
     """
     This calls the API functions to get the data for a set.
     """
