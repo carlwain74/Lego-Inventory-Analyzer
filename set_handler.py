@@ -76,7 +76,12 @@ class SetHandler():
                 return sets
 
     def test_config(self, config_file = 'config.ini'):
-        res = self.bricklink_session.getDetails("75105-1")
+        try:
+            res = self.bricklink_session.testConnection()
+        except Exception as e:
+            logging.exception("Could not test bricklink api session", str(e))
+
+        logging.info(f"Test Connection result: {res}")
 
         if res:
             return True

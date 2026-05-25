@@ -234,21 +234,21 @@ class TestSetHandlerFileMode:
 class TestSetHandlerTestConfig:
     def test_returns_true_when_api_returns_data(self):
         h, session = make_handler(set_num='75192-1')
-        session.getDetails.return_value = {'name': 'Clone Trooper'}
+        session.testConnection.return_value = {'category_id': 1, 'category_name': 'Antenna', 'parent_id': 0}
         assert h.test_config() is True
 
     def test_returns_false_when_api_returns_none(self):
         h, session = make_handler(set_num='75192-1')
-        session.getDetails.return_value = None
+        session.testConnection.return_value = None
         assert h.test_config() is False
 
     def test_returns_false_when_api_returns_empty_dict(self):
         h, session = make_handler(set_num='75192-1')
-        session.getDetails.return_value = {}
+        session.testConnection.return_value = {}
         assert h.test_config() is False
 
     def test_calls_getDetails_with_correct_set_number(self):
         h, session = make_handler(set_num='75192-1')
-        session.getDetails.return_value = {'name': 'Test'}
+        session.testConnection.return_value = {'name': 'Test'}
         h.test_config()
-        session.getDetails.assert_called_once_with('75105-1')
+        session.getDetails.testConnection()

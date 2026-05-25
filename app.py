@@ -147,7 +147,7 @@ def test_connection():
             config.write(f)
 
         # Run the test
-        tester = SetHandler(config_file=CONFIG_PATH)
+        tester = SetHandler('','','',config_file=CONFIG_PATH)
         result = tester.test_config()
         return jsonify({'ok': bool(result)})
 
