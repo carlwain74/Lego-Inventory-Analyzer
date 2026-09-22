@@ -108,6 +108,8 @@ def upsert_set(session, set_data: dict) -> Set:
     prev = set_data.get('past',    {})
 
     price = SetPrice(
+        retail_price_usd = set_data.get('retail_price_usd'),
+
         cur_avg      = cur.get('avg'),
         cur_max      = cur.get('max'),
         cur_min      = cur.get('min'),
@@ -187,6 +189,7 @@ def set_to_dict(set_row: Set) -> dict:
         'thumbnail':    set_row.thumbnail or '',
         'quantity':     inv.quantity      if inv else 0,
         'last_fetched': set_row.last_fetched.isoformat() if set_row.last_fetched else None,
+        'retail_price_usd': price.retail_price_usd if price else None,
         'current': {
             'avg':      price.cur_avg      if price else None,
             'max':      price.cur_max      if price else None,

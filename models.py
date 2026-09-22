@@ -9,7 +9,7 @@ Three tables:
 
 from datetime import datetime, timezone
 from sqlalchemy import (
-    Column, Integer, String, DateTime, ForeignKey, UniqueConstraint, Text
+    Column, Integer, String, DateTime, ForeignKey, UniqueConstraint, Text, Float
 )
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -57,6 +57,8 @@ class SetPrice(Base):
     id            = Column(Integer, primary_key=True)
     set_id        = Column(Integer, ForeignKey('sets.id'), nullable=False)
     fetched_at    = Column(DateTime(timezone=True), default=_now, nullable=False)
+
+    retail_price_usd = Column(Float)
 
     cur_avg       = Column(Integer)
     cur_max       = Column(Integer)

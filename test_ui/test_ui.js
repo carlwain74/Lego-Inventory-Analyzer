@@ -216,6 +216,30 @@ describe('normaliseSets — single set', () => {
 
   // Sale value: (1104 + 1498) / 2 = 1301
   test('saleValue = 1301 USD',               () => expect(s.saleValue).toBe('1301 USD'));
+
+  // Retail price: absent in fixture -> em dash
+  test('retail_price_usd absent -> —',       () => expect(s.retail_price_usd).toBe('—'));
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// normaliseSets — retail_price_usd
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('normaliseSets — retail_price_usd', () => {
+  test('formatted as "value USD" when present', () => {
+    const s = normaliseSets({
+      '1-1': { name: 'T', category: 'X', current: {}, past: {}, year: 2020, retail_price_usd: 849.99 },
+    })[0];
+    expect(s.retail_price_usd).toBe('849.99 USD');
+  });
+
+  test('em dash when null', () => {
+    const s = normaliseSets({
+      '1-1': { name: 'T', category: 'X', current: {}, past: {}, year: 2020, retail_price_usd: null },
+    })[0];
+    expect(s.retail_price_usd).toBe('—');
+  });
 });
 
 

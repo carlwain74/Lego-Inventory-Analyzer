@@ -1,5 +1,10 @@
 [secrets]
-consumer_key = 
-consumer_secret = 
-token_value = 
-token_secret = 
+consumer_key =
+consumer_secret =
+token_value =
+token_secret =
+
+# BrickSet API key (https://brickset.com/tools/webservices/requestkey), used
+# to look up the official LEGO.com US retail price.
+[bricklink]
+api_key =

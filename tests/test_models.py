@@ -124,6 +124,20 @@ class TestSetPriceModel:
         session.flush()
         assert 'SetPrice' in repr(p)
 
+    def test_retail_price_usd_stored(self, session):
+        s = self._set(session)
+        p = SetPrice(set_id=s.id, retail_price_usd=849.99)
+        session.add(p)
+        session.commit()
+        assert p.retail_price_usd == 849.99
+
+    def test_retail_price_usd_defaults_to_none(self, session):
+        s = self._set(session)
+        p = SetPrice(set_id=s.id)
+        session.add(p)
+        session.commit()
+        assert p.retail_price_usd is None
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Inventory model

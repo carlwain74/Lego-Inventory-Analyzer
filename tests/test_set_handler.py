@@ -49,11 +49,14 @@ SAMPLE_SETS = {
 def make_handler(set_num=None, set_list=None, multi_sheet=False,
                  output_file='Sets.xlsx', config_file='config.ini'):
     """
-    Instantiate a real SetHandler with BrickLinkAPI patched out.
-    Returns (handler, mock_session).
+    Instantiate a real SetHandler with BrickLinkAPI and BrickSetAPI patched
+    out. Returns (handler, mock_bricklink_session).
     """
     mock_session = MagicMock()
-    with patch('set_handler.BrickLinkAPI', return_value=mock_session):
+    mock_brickset_session = MagicMock()
+    mock_brickset_session.get_retail_price_usd.return_value = None
+    with patch('set_handler.BrickLinkAPI', return_value=mock_session), \
+         patch('set_handler.BrickSetAPI', return_value=mock_brickset_session):
         handler = SetHandler(
             set_num=set_num,
             set_list=set_list,
@@ -143,6 +146,21 @@ class TestSetHandlerSingleSet:
         session.getSets.return_value = SAMPLE_SETS
         h.set_handler()
         session.processSet.assert_called_once_with('75192-1')
+
+    def test_attaches_retail_price_from_brickset(self):
+        h, session = make_handler(set_num='75192-1')
+        session.getSets.return_value = {'75192-1': dict(SAMPLE_SETS['75192-1'])}
+        h.brickset_session.get_retail_price_usd.return_value = 849.99
+        result = h.set_handler()
+        assert result['75192-1']['retail_price_usd'] == 849.99
+        h.brickset_session.get_retail_price_usd.assert_called_once_with('75192-1')
+
+    def test_retail_price_none_when_brickset_lookup_fails(self):
+        h, session = make_handler(set_num='75192-1')
+        session.getSets.return_value = {'75192-1': dict(SAMPLE_SETS['75192-1'])}
+        h.brickset_session.get_retail_price_usd.side_effect = Exception('boom')
+        result = h.set_handler()
+        assert result['75192-1']['retail_price_usd'] is None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

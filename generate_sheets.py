@@ -103,7 +103,7 @@ def create_wookbook_and_sheet(xls_filename):
 
     header_color = "00C0C0C0"
 
-    xls_headers = ['Item', 'Name', 'Category', 'Avg Price', 'Min Price', 'Max Price', 'Quantity', 'Year']
+    xls_headers = ['Item', 'Name', 'Category', 'Avg Price', 'Min Price', 'Max Price', 'Quantity', 'Year', 'Retail Price (US)']
 
     _row = 5
     col_adjust = 0
@@ -141,6 +141,8 @@ def generate_single_sheet(sets, workbook, worksheet):
         data = worksheet.cell(row=_row, column=_col+6, value=sets[_set]['current']['quantity'])
         data.alignment = Alignment(horizontal="center", vertical="center")
         data = worksheet.cell(row=_row, column=_col+7, value=sets[_set]['year'])
+        data.alignment = Alignment(horizontal="center", vertical="center")
+        data = worksheet.cell(row=_row, column=_col+8, value=sets[_set].get('retail_price_usd'))
         data.alignment = Alignment(horizontal="center", vertical="center")
 
 def generate_multi_sheet(sets, workbook):
