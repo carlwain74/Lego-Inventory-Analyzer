@@ -285,3 +285,17 @@ class TestSetToDict:
 
     def test_last_fetched_is_iso_string(self):
         assert isinstance(self._setup()['last_fetched'], str)
+
+    def test_returns_retail_price_usd(self):
+        data = dict(SAMPLE_DATA, retail_price_usd=849.99)
+        with get_session() as s:
+            set_row = upsert_set(s, data)
+            s.flush()
+            s.add(Inventory(set_id=set_row.id, quantity=1))
+        with get_session() as s:
+            row = s.query(Set).filter_by(set_number='75192-1').first()
+            result = set_to_dict(row)
+        assert result['retail_price_usd'] == 849.99
+
+    def test_retail_price_usd_none_when_not_fetched(self):
+        assert self._setup()['retail_price_usd'] is None

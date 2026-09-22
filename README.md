@@ -2,7 +2,8 @@
 
 A local web application for analysing Bricklink marketplace pricing data across
 Lego sets. Look up individual sets or import a collection into a persistent
-inventory, with live price data fetched from the Bricklink API.
+inventory, with live price data fetched from the Bricklink API and the
+official LEGO.com US retail price fetched from the BrickSet API.
 
 ---
 
@@ -36,6 +37,8 @@ it as an interactive dashboard.
   chips and a search box; remove individual sets or clear all
 - **Refresh prices** — refresh all inventory prices in one click; progress
   shown in an animated right-panel view
+- **Official retail price** — each set card shows the official LEGO.com US
+  retail price (MSRP) alongside the marketplace pricing, fetched from BrickSet
 - **Current & past sales** — each set card displays separate pricing rows for
   items currently for sale and historical sold listings
 - **Sale value estimate** — recommended sale price derived from the average of
@@ -52,7 +55,7 @@ it as an interactive dashboard.
 
 | Layer | Technology |
 |---|---|
-| Backend | Python 3.14 · Flask · SQLAlchemy · bricklink-py · openpyxl |
+| Backend | Python 3.14 · Flask · SQLAlchemy · bricklink-py · brickse · openpyxl |
 | Database | SQLite (via SQLAlchemy) |
 | Frontend | Vanilla JS · CSS custom properties · HTML5 |
 | Testing (Python) | pytest · pytest-cov |
@@ -69,11 +72,12 @@ it as an interactive dashboard.
 ├── app.py                    # Flask application, route registration, DB init
 ├── database.py               # SQLAlchemy engine, session, upsert helpers
 ├── models.py                 # SQLAlchemy models — Set, SetPrice, Inventory
-├── set_handler.py            # SetHandler class — wraps Bricklink API calls
-├── bricklink.py              # BrickLinkAPI — low-level API client
+├── set_handler.py             # SetHandler class — wraps Bricklink + BrickSet API calls
+├── bricklink.py               # BrickLinkAPI — low-level Bricklink API client
+├── brickset.py                # BrickSetAPI — official US retail price lookup
 ├── generate_sheets.py        # XLSX generation
 ├── config.ini.template       # Credentials template (committed)
-├── config.ini                # Bricklink API credentials (not committed)
+├── config.ini                # Bricklink + BrickSet API credentials (not committed)
 ├── VERSION                   # Current version string
 ├── Pipfile                   # Python dependencies
 ├── Pipfile.lock
@@ -96,6 +100,7 @@ it as an interactive dashboard.
     ├── conftest.py           # pytest shared fixtures and module stubs
     ├── test_app.py           # Flask route tests (/, /generate, /settings, /download)
     ├── test_bricklink.py     # BrickLinkAPI unit tests
+    ├── test_brickset.py      # BrickSetAPI unit tests
     ├── test_database.py      # database helper tests (init_db, upsert, set_to_dict)
     ├── test_inventory_routes.py  # Inventory and import blueprint tests
     ├── test_models.py        # SQLAlchemy model tests
@@ -112,6 +117,8 @@ it as an interactive dashboard.
 - **Node.js 18+** and **npm** — [nodejs.org](https://nodejs.org)
 - A Bricklink account with API credentials
   ([register here](https://www.bricklink.com/v3/api.page))
+- A BrickSet API key ([request one here](https://brickset.com/tools/webservices/requestkey))
+  — optional, only needed for the official US retail price
 
 ---
 
@@ -123,14 +130,17 @@ it as an interactive dashboard.
 pipenv install
 ```
 
-### 2. Configure Bricklink API credentials
+### 2. Configure API credentials
 
 ```bash
 cp config.ini.template config.ini
 ```
 
-Open `config.ini` and fill in your credentials, or use the in-app settings
-dialog (see [Configuration](#configuration)).
+Open `config.ini` and fill in your Bricklink credentials under `[secrets]`
+and, if you want the official retail price, your BrickSet API key under
+`[bricklink]` → `api_key`. Bricklink credentials can also be managed via the
+in-app settings dialog (see [Configuration](#configuration)); the BrickSet
+key is currently config-file only.
 
 ### 3. Start the server
 
@@ -171,6 +181,11 @@ settings panel:
 2. Enter new values for any of the four credential fields
 3. Use **Test Connection** to verify credentials before saving
 4. Click **Save Settings** — changes take effect immediately
+
+The BrickSet API key that powers the official US retail price lives in
+`config.ini` under `[bricklink]` → `api_key` and is not currently exposed in
+the settings dialog — edit the file directly. If it's absent or the lookup
+fails, sets are still returned normally with `retail_price_usd` left blank.
 
 > **Security note:** `config.ini` contains sensitive credentials and should
 > never be committed to version control. Ensure it is listed in `.gitignore`.
@@ -239,13 +254,14 @@ npm test
 
 | Suite | File | Tests |
 |---|---|---|
-| Flask routes (`/`, `/generate`, `/settings`, `/download`) | `test_app.py` | 44 |
+| Flask routes (`/`, `/generate`, `/settings`, `/download`) | `test_app.py` | 55 |
 | BrickLinkAPI client | `test_bricklink.py` | 36 |
-| Database helpers (`init_db`, `upsert_set`, `set_to_dict` etc.) | `test_database.py` | 27 |
+| BrickSetAPI client | `test_brickset.py` | 11 |
+| Database helpers (`init_db`, `upsert_set`, `set_to_dict` etc.) | `test_database.py` | 29 |
 | Inventory & import routes | `test_inventory_routes.py` | 30 |
-| SQLAlchemy models | `test_models.py` | 15 |
-| SetHandler | `test_set_handler.py` | 24 |
-| Frontend JS (`normaliseSets`, `formatPrice`, `formatSaleDate`, `calcSaleValue`, `esc`) | `test_ui.js` | 59 |
+| SQLAlchemy models | `test_models.py` | 17 |
+| SetHandler | `test_set_handler.py` | 26 |
+| Frontend JS (`normaliseSets`, `formatPrice`, `formatSaleDate`, `calcSaleValue`, `esc`) | `test_ui.js` | 62 |
 
 ---
 

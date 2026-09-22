@@ -9,6 +9,7 @@ pytest-cov = "*"
 
 [packages]
 bricklink-py = "*"
+brickse = "*"
 openpyxl = "*"
 flask = "*"
 sqlalchemy = "*"

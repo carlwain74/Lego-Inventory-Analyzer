@@ -1,5 +1,6 @@
 import generate_sheets as sheets
 from bricklink import BrickLinkAPI
+from brickset import BrickSetAPI
 import logging
 import json
 from os.path import exists
@@ -24,6 +25,7 @@ class SetHandler():
 
         logging.info('Setup API session')
         self.bricklink_session = BrickLinkAPI(self.config_file)
+        self.brickset_session = BrickSetAPI(self.config_file)
 
         if not self.bricklink_session:
             logging.error('Could not create an API session')
@@ -43,6 +45,7 @@ class SetHandler():
                 return None
 
             sets = self.bricklink_session.getSets()
+            self._attach_retail_prices(sets)
             for key in sets:
                 self.bricklink_session.print_details(sets[key], key)
             return sets
@@ -61,7 +64,8 @@ class SetHandler():
                             self.bricklink_session.processSet(line.strip())
 
                     sets = self.bricklink_session.getSets()
-                    
+                    self._attach_retail_prices(sets)
+
                     logging.info("Creating workbook")
                     if self.multi_sheet:
                         logging.info("Multi Sheet")
@@ -74,6 +78,19 @@ class SetHandler():
 
                 workbook.save(filename=self.output_file)
                 return sets
+
+    """
+    Attaches the official LEGO.com US retail price (from BrickSet) to each
+    set already fetched from Bricklink. A lookup failure is logged and the
+    set is left with retail_price_usd = None rather than aborting the run.
+    """
+    def _attach_retail_prices(self, sets):
+        for set_number, data in sets.items():
+            try:
+                data['retail_price_usd'] = self.brickset_session.get_retail_price_usd(set_number)
+            except Exception as e:
+                logging.exception(f"Could not get retail price for {set_number} " + str(e))
+                data['retail_price_usd'] = None
 
     def test_config(self, config_file = 'config.ini'):
         try:

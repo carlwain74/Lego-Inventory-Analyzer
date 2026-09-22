@@ -772,6 +772,8 @@
     }
     .stats-section-label.current { color: var(--blue); background: #f0f6fc; }
     .stats-section-label.previous { color: #888; background: #f7f7f5; }
+    .stats-section-label.retail { color: #1a7f37; background: #f0faf3; }
+    .set-stats .stat-block.retail-block { grid-column: 1 / -1; border-right: none; }
     .set-stats .stat-block {
       padding: 10px 16px 12px;
       border-right: 2px solid var(--grey);
@@ -1782,6 +1784,8 @@
         prev_date: formatSaleDate(prev.last_sale_date || ''),
         // Derived
         saleValue:    calcSaleValue(cur_avg, cur_max),
+        // Official LEGO.com US retail price (from BrickSet)
+        retail_price_usd: s.retail_price_usd != null ? `${s.retail_price_usd} USD` : '—',
         // Inventory fields (present when loaded from /inventory)
         quantity:     s.quantity    != null ? s.quantity    : null,
         last_fetched: s.last_fetched || null,
@@ -1817,6 +1821,10 @@
         <div class="set-year-badge">${esc(s.year)}</div>
       </div>
       <div class="set-stats">
+        <div class="stats-section-label retail">Official Retail Price (US)</div>
+        <div class="stat-block retail-block highlight">
+          <div class="stat-value">${formatPrice(s.retail_price_usd)}</div>
+        </div>
         <div class="stats-section-label current">Current Items for Sale</div>
         <div class="stat-block highlight">
           <div class="stat-label">Avg</div>
