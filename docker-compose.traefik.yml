@@ -1,0 +1,44 @@
+services:
+  lego-inventory:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lego-inventory
+    restart: on-failure
+
+    volumes:
+      # Bind mount — credentials never baked into the image
+      - ./config.ini:/app/config.ini:ro
+      # Named volume — persists inventory.db across container restarts
+      - db:/app/db
+      # Named volume — persists generated Sets.xlsx across container restarts
+      - output:/app/output
+
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OUTPUT_DIR=/app/output
+      - DB_DIR=/app/db
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.lego-inventory.rule=Host(`lego-inventory.home.local`)"
+      - "traefik.http.services.lego-inventory.loadbalancer.server.port=5000"
+
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    networks:
+      - web
+
+volumes:
+  db:
+  output:
+
+networks:
+  web:
+    external: true
+    name: web
