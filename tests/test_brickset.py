@@ -99,6 +99,18 @@ class TestGetRetailPriceUsd:
 
         assert api.get_retail_price_usd('99999-1') is None
 
+    def test_returns_none_when_status_is_error(self, tmp_path, monkeypatch, caplog):
+        api = BrickSetAPI(make_config(tmp_path))
+        mock_brickse = MagicMock()
+        mock_brickse.lego.get_set.return_value = make_response({
+            'status': 'error', 'message': 'INVALID_APIKEY',
+        })
+        monkeypatch.setitem(sys.modules, 'brickse', mock_brickse)
+
+        with caplog.at_level('WARNING'):
+            assert api.get_retail_price_usd('75192-1') is None
+        assert 'INVALID_APIKEY' in caplog.text
+
     def test_returns_none_when_retail_price_missing(self, tmp_path, monkeypatch):
         api = BrickSetAPI(make_config(tmp_path))
         mock_brickse = MagicMock()

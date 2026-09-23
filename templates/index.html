@@ -759,7 +759,7 @@
       display: grid;
       grid-template-columns: repeat(5, 1fr);
     }
-    /* Row divider label between current and previous sales */
+    /* Row divider label between current and past sales */
     .stats-section-label {
       grid-column: 1 / -1;
       font-size: 0.6rem;
@@ -771,7 +771,7 @@
       border-bottom: none;
     }
     .stats-section-label.current { color: var(--blue); background: #f0f6fc; }
-    .stats-section-label.previous { color: #888; background: #f7f7f5; }
+    .stats-section-label.past { color: #888; background: #f7f7f5; }
     .stats-section-label.retail { color: #1a7f37; background: #f0faf3; }
     .set-stats .stat-block.retail-block { grid-column: 1 / -1; border-right: none; }
     .set-stats .stat-block {
@@ -801,8 +801,16 @@
     }
     .stat-block.highlight .stat-value { color: var(--blue); }
     .stat-block.qty        .stat-value { color: var(--red); }
-    .stat-block.prev       .stat-value { color: #777; font-size: 0.95rem; }
-    .stat-block.prev       .stat-label { color: #bbb; }
+    .stat-block.past       .stat-value { color: #777; font-size: 0.95rem; }
+    .stat-block.past       .stat-label { color: #bbb; }
+    .stat-subvalue {
+      font-size: 0.62rem;
+      font-weight: 800;
+      margin-top: 3px;
+      letter-spacing: 0.2px;
+    }
+    .stat-subvalue.gain { color: #1a7f37; }
+    .stat-subvalue.loss { color: #c0392b; }
     .stat-block.last-sale {
       grid-column: 1 / -1;
       border-right: none;
@@ -1217,6 +1225,13 @@
       color: var(--yellow);
       font-size: 0.9rem;
     }
+    .summary-pct {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: #999;
+    }
+    .summary-pct.gain { color: #2ea043; }
+    .summary-pct.loss { color: #e5534b; }
     .download-link {
       margin-left: auto;
       display: inline-flex;
@@ -1497,8 +1512,8 @@
         <!-- summary bar shown in file mode -->
         <div class="summary-bar" id="summary-bar" style="display:none;">
           <div class="summary-item">Sets: <strong id="summary-count">0</strong></div>
-          <div class="summary-item">Current avg: <strong id="summary-avg">—</strong></div>
-          <div class="summary-item">Previous avg: <strong id="summary-avg-prev">—</strong></div>
+          <div class="summary-item">Current total: <strong id="summary-cur-total">—</strong> <span class="summary-pct" id="summary-cur-total-pct"></span></div>
+          <div class="summary-item">Past total: <strong id="summary-past-total">—</strong> <span class="summary-pct" id="summary-past-total-pct"></span></div>
           <a class="download-link" id="download-link" href="/download" download="Sets.xlsx">⬇ Download Sets.xlsx</a>
         </div>
       </div>
@@ -1753,16 +1768,23 @@
       if (!s || typeof s !== 'object') return null;
       try {
       const cur  = s.current || {};
-      const prev = s.past    || {};
-      const currency = cur.currency || prev.currency || '';
+      const past = s.past    || {};
+      const currency = cur.currency || past.currency || '';
 
       function fmt(val) {
         if (val == null) return '—';
         return currency ? `${val} ${currency}` : String(val);
       }
 
-      const cur_avg = fmt(cur.avg);
-      const cur_max = fmt(cur.max);
+      const cur_avg  = fmt(cur.avg);
+      const cur_max  = fmt(cur.max);
+      const past_avg = fmt(past.avg);
+      const past_max = fmt(past.max);
+
+      const saleValue     = calcSaleValue(cur_avg, cur_max);
+      const pastSaleValue = calcSaleValue(past_avg, past_max);
+      // Official LEGO.com US retail price (from BrickSet)
+      const retail_price_usd = s.retail_price_usd != null ? `${s.retail_price_usd} USD` : '—';
 
       return {
         number,
@@ -1776,16 +1798,19 @@
         cur_max,
         cur_min: fmt(cur.min),
         cur_qty: cur.quantity != null ? String(cur.quantity) : '—',
-        // Previous Sales
-        prev_avg: fmt(prev.avg),
-        prev_max: fmt(prev.max),
-        prev_min: fmt(prev.min),
-        prev_qty: prev.quantity != null ? String(prev.quantity) : '—',
-        prev_date: formatSaleDate(prev.last_sale_date || ''),
+        // Past Sales
+        past_avg,
+        past_max,
+        past_min: fmt(past.min),
+        past_qty: past.quantity != null ? String(past.quantity) : '—',
+        past_date: formatSaleDate(past.last_sale_date || ''),
         // Derived
-        saleValue:    calcSaleValue(cur_avg, cur_max),
-        // Official LEGO.com US retail price (from BrickSet)
-        retail_price_usd: s.retail_price_usd != null ? `${s.retail_price_usd} USD` : '—',
+        saleValue,
+        pastSaleValue,
+        retail_price_usd,
+        // % gain/loss of Sale Value vs official retail price
+        curVsRetailPct:  pctChange(saleValue,     retail_price_usd),
+        pastVsRetailPct: pctChange(pastSaleValue, retail_price_usd),
         // Inventory fields (present when loaded from /inventory)
         quantity:     s.quantity    != null ? s.quantity    : null,
         last_fetched: s.last_fetched || null,
@@ -1845,31 +1870,33 @@
         <div class="stat-block sale no-border">
           <div class="stat-label">Sale Value</div>
           <div class="stat-value">${formatPrice(s.saleValue)}</div>
+          <div class="stat-subvalue ${pctClass(s.curVsRetailPct)}">${esc(s.curVsRetailPct)} vs Retail</div>
         </div>
-        <div class="stats-section-label previous">Past Sales</div>
-        <div class="stat-block prev">
+        <div class="stats-section-label past">Past Sales</div>
+        <div class="stat-block past">
           <div class="stat-label">Avg</div>
-          <div class="stat-value">${formatPrice(s.prev_avg)}</div>
+          <div class="stat-value">${formatPrice(s.past_avg)}</div>
         </div>
-        <div class="stat-block prev">
+        <div class="stat-block past">
           <div class="stat-label">Max</div>
-          <div class="stat-value">${formatPrice(s.prev_max)}</div>
+          <div class="stat-value">${formatPrice(s.past_max)}</div>
         </div>
-        <div class="stat-block prev">
+        <div class="stat-block past">
           <div class="stat-label">Min</div>
-          <div class="stat-value">${formatPrice(s.prev_min)}</div>
+          <div class="stat-value">${formatPrice(s.past_min)}</div>
         </div>
-        <div class="stat-block prev qty no-border">
+        <div class="stat-block past qty no-border">
           <div class="stat-label">Qty</div>
-          <div class="stat-value">${esc(s.prev_qty)}</div>
+          <div class="stat-value">${esc(s.past_qty)}</div>
         </div>
-        <div class="stat-block prev sale no-border">
+        <div class="stat-block past sale no-border">
           <div class="stat-label">Sale Value</div>
-          <div class="stat-value">${formatPrice(calcSaleValue(s.prev_avg, s.prev_max))}</div>
+          <div class="stat-value">${formatPrice(s.pastSaleValue)}</div>
+          <div class="stat-subvalue ${pctClass(s.pastVsRetailPct)}">${esc(s.pastVsRetailPct)} vs Retail</div>
         </div>
-        <div class="stat-block prev last-sale">
+        <div class="stat-block past last-sale">
           <div class="stat-label">Last Sale</div>
-          <div class="stat-value last-sale-date">${esc(s.prev_date)}</div>
+          <div class="stat-value last-sale-date">${esc(s.past_date)}</div>
         </div>
       </div>`;
 
@@ -1993,19 +2020,37 @@
       sets.forEach(s => setCardsScroll.appendChild(buildSetCard(s, isInventory)));
 
     if (isFileMode && _allSets.length > 1) {
-      const currency = (_allSets[0]?.cur_avg || _allSets[0]?.prev_avg || '').split(' ')[1] || '';
+      const currency = (_allSets[0]?.cur_avg || _allSets[0]?.past_avg || '').split(' ')[1] || '';
 
-      const curAvgs  = sets.map(s => parseFloat(s.cur_avg)).filter(n => !isNaN(n));
-      const prevAvgs = sets.map(s => parseFloat(s.prev_avg)).filter(n => !isNaN(n));
+      // Totals — sum of each set's Sale Value (avg of avg+max) across the whole list
+      const curSaleValues  = sets.map(s => parseFloat(s.saleValue)).filter(n => !isNaN(n));
+      const pastSaleValues = sets.map(s => parseFloat(s.pastSaleValue)).filter(n => !isNaN(n));
+      const retailValues   = sets.map(s => parseFloat(s.retail_price_usd)).filter(n => !isNaN(n));
 
-      const sumCur  = curAvgs.length  ? curAvgs.reduce((a, b)  => a + b, 0).toFixed(0)  : null;
-      const sumPrev = prevAvgs.length ? prevAvgs.reduce((a, b) => a + b, 0).toFixed(0) : null;
+      const curTotal    = curSaleValues.length  ? curSaleValues.reduce((a, b)  => a + b, 0).toFixed(0)  : null;
+      const pastTotal   = pastSaleValues.length ? pastSaleValues.reduce((a, b) => a + b, 0).toFixed(0) : null;
+      const retailTotal = retailValues.length   ? retailValues.reduce((a, b)  => a + b, 0).toFixed(0)  : null;
+      const curStr    = curTotal    ? `${curTotal} ${currency}`    : '';
+      const pastStr   = pastTotal   ? `${pastTotal} ${currency}`   : '';
+      const retailStr = retailTotal ? `${retailTotal} ${currency}` : '';
 
-      document.getElementById('summary-count').textContent    = sets.length;
-      document.getElementById('summary-avg').textContent      = sumCur
-        ? `${Number(sumCur).toLocaleString()} ${currency}` : '—';
-      document.getElementById('summary-avg-prev').textContent = sumPrev
-        ? `${Number(sumPrev).toLocaleString()} ${currency}` : '—';
+      // Each total's gain/loss vs the retail total, independent of the other total
+      const curVsRetailPct  = pctChange(curStr,  retailStr);
+      const pastVsRetailPct = pctChange(pastStr, retailStr);
+      const parenPct = (p) => p === '—' ? '' : `(${p})`;
+
+      const curPctEl  = document.getElementById('summary-cur-total-pct');
+      const pastPctEl = document.getElementById('summary-past-total-pct');
+
+      document.getElementById('summary-count').textContent      = sets.length;
+      document.getElementById('summary-cur-total').textContent  = curTotal
+        ? `${Number(curTotal).toLocaleString()} ${currency}` : '—';
+      document.getElementById('summary-past-total').textContent = pastTotal
+        ? `${Number(pastTotal).toLocaleString()} ${currency}` : '—';
+      curPctEl.textContent  = parenPct(curVsRetailPct);
+      curPctEl.className    = 'summary-pct ' + pctClass(curVsRetailPct);
+      pastPctEl.textContent = parenPct(pastVsRetailPct);
+      pastPctEl.className   = 'summary-pct ' + pctClass(pastVsRetailPct);
       summaryBar.style.display = 'flex';
     } else {
       summaryBar.style.display = 'none';
@@ -2601,6 +2646,23 @@
     if (parts.length === 2 && !isNaN(parts[0]))
       return `${Number(parts[0]).toLocaleString()}<span class="currency">${parts[1]}</span>`;
     return raw || '—';
+  }
+
+  // % change of newRaw relative to baseRaw — both "value CURRENCY" strings (or '—')
+  function pctChange(newRaw, baseRaw) {
+    const newNum  = parseFloat((newRaw  || '').split(' ')[0]);
+    const baseNum = parseFloat((baseRaw || '').split(' ')[0]);
+    if (isNaN(newNum) || isNaN(baseNum) || baseNum === 0) return '—';
+    const pct = ((newNum - baseNum) / baseNum) * 100;
+    const sign = pct > 0 ? '+' : '';
+    return `${sign}${pct.toFixed(1)}%`;
+  }
+
+  function pctClass(pctStr) {
+    if (!pctStr || pctStr === '—') return '';
+    if (pctStr.startsWith('-')) return 'loss';
+    if (pctStr.startsWith('+')) return 'gain';
+    return '';
   }
 
   function esc(str) {

@@ -105,6 +105,47 @@ class TestInitDb:
             assert row.latest_price.retail_price_usd is None
             assert row.latest_price.cur_avg == 450
 
+    def test_renames_legacy_prev_columns_and_preserves_data(self, tmp_path):
+        """
+        SetPrice.prev_* was renamed to past_* — a db file from before that
+        rename must be migrated in place (not just gain new blank past_*
+        columns) so existing past-sales data survives.
+        """
+        import sqlite3
+
+        db_path = str(tmp_path / 'prev_named.db')
+        conn = sqlite3.connect(db_path)
+        conn.executescript('''
+            CREATE TABLE sets (
+                id INTEGER PRIMARY KEY, set_number VARCHAR NOT NULL UNIQUE, name VARCHAR,
+                category VARCHAR, year INTEGER, image TEXT, thumbnail TEXT, last_fetched DATETIME
+            );
+            CREATE TABLE set_prices (
+                id INTEGER PRIMARY KEY, set_id INTEGER NOT NULL, fetched_at DATETIME NOT NULL,
+                retail_price_usd FLOAT,
+                cur_avg INTEGER, cur_max INTEGER, cur_min INTEGER, cur_qty INTEGER, cur_currency VARCHAR,
+                prev_avg INTEGER, prev_max INTEGER, prev_min INTEGER, prev_qty INTEGER,
+                prev_currency VARCHAR, prev_last_sale_date VARCHAR
+            );
+            CREATE TABLE inventory (
+                id INTEGER PRIMARY KEY, set_id INTEGER NOT NULL, quantity INTEGER NOT NULL,
+                added_at DATETIME NOT NULL, updated_at DATETIME NOT NULL
+            );
+            INSERT INTO sets (set_number, name) VALUES ('75192-1', 'Millennium Falcon');
+            INSERT INTO set_prices (set_id, fetched_at, cur_avg, prev_avg, prev_currency, prev_last_sale_date)
+                VALUES (1, '2024-01-01 00:00:00', 450, 400, 'USD', '2024-06-15T10:00:00.000Z');
+        ''')
+        conn.commit()
+        conn.close()
+
+        init_db(db_path)
+
+        with get_session() as s:
+            row = s.query(Set).filter_by(set_number='75192-1').first()
+            assert row.latest_price.past_avg == 400
+            assert row.latest_price.past_currency == 'USD'
+            assert row.latest_price.past_last_sale_date == '2024-06-15T10:00:00.000Z'
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # get_session
@@ -188,7 +229,7 @@ class TestUpsertSet:
             assert price.cur_avg      == 450
             assert price.cur_max      == 800
             assert price.cur_currency == 'USD'
-            assert price.prev_last_sale_date == '2024-06-15T10:00:00.000Z'
+            assert price.past_last_sale_date == '2024-06-15T10:00:00.000Z'
 
     def test_last_fetched_updated(self):
         before = datetime.now(timezone.utc)

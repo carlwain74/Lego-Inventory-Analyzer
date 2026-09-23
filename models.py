@@ -66,12 +66,12 @@ class SetPrice(Base):
     cur_qty       = Column(Integer)
     cur_currency  = Column(String)
 
-    prev_avg      = Column(Integer)
-    prev_max      = Column(Integer)
-    prev_min      = Column(Integer)
-    prev_qty      = Column(Integer)
-    prev_currency = Column(String)
-    prev_last_sale_date = Column(String)
+    past_avg      = Column(Integer)
+    past_max      = Column(Integer)
+    past_min      = Column(Integer)
+    past_qty      = Column(Integer)
+    past_currency = Column(String)
+    past_last_sale_date = Column(String)
 
     set = relationship('Set', back_populates='prices')
 

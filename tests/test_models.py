@@ -102,9 +102,9 @@ class TestSetPriceModel:
         s = self._set(session)
         p = SetPrice(set_id=s.id, cur_avg=450, cur_max=800,
                      cur_min=350, cur_qty=5, cur_currency='USD',
-                     prev_avg=400, prev_max=750, prev_min=300,
-                     prev_qty=12, prev_currency='USD',
-                     prev_last_sale_date='2024-06-15T10:00:00.000Z')
+                     past_avg=400, past_max=750, past_min=300,
+                     past_qty=12, past_currency='USD',
+                     past_last_sale_date='2024-06-15T10:00:00.000Z')
         session.add(p)
         session.commit()
         assert session.query(SetPrice).count() == 1

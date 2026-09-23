@@ -23,6 +23,7 @@ COPY models.py database.py ./
 COPY routes/ routes/
 COPY templates/ templates/
 COPY VERSION ./
+COPY gunicorn.conf.py ./
 
 # Expose Flask port
 EXPOSE 5000
@@ -31,4 +32,4 @@ EXPOSE 5000
 # Install gunicorn as part of the image (not in Pipfile to keep it Docker-specific)
 RUN pip install --no-cache-dir gunicorn
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "120", "app:app"]
+CMD ["gunicorn", "--config", "gunicorn.conf.py", "app:app"]
