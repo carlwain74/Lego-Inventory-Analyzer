@@ -48,8 +48,16 @@ class BrickSetAPI:
             logging.exception(f'Could not fetch retail price for {set_number}: {str(e)}')
             return None
 
+        if payload.get('status') != 'success':
+            logging.warning(
+                f'BrickSet lookup for {set_number} returned status={payload.get("status")!r}: '
+                f'{payload.get("message")}'
+            )
+            return None
+
         matches = payload.get('sets') or []
         if not matches:
+            logging.info(f'No BrickSet match for {set_number} — matches={payload.get("matches")}')
             return None
 
         price = matches[0].get('LEGOCom', {}).get('US', {}).get('retailPrice')

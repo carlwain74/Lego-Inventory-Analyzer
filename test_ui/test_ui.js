@@ -39,14 +39,15 @@ document.createElement       = jest.fn((tag) => stubEl(tag));
 window.innerWidth            = 1280;
 window.innerHeight           = 800;
 global.fetch                 = jest.fn();
+global.requestAnimationFrame = jest.fn((cb) => cb());
 
 // ── Evaluate and expose functions ─────────────────────────────────────────────
 // eslint-disable-next-line no-new-func
 const ui = new Function(rawScript + `
-  ;return { normaliseSets, formatPrice, formatSaleDate, calcSaleValue, esc };
+  ;return { normaliseSets, formatPrice, formatSaleDate, calcSaleValue, esc, pctChange, pctClass, showSetCards };
 `)();
 
-const { normaliseSets, formatPrice, formatSaleDate, calcSaleValue, esc } = ui;
+const { normaliseSets, formatPrice, formatSaleDate, calcSaleValue, esc, pctChange, pctClass, showSetCards } = ui;
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -204,21 +205,28 @@ describe('normaliseSets — single set', () => {
   test('cur_qty = 10',                        () => expect(s.cur_qty).toBe('10'));
 
   // Past sales
-  test('prev_avg = 929 USD',                  () => expect(s.prev_avg).toBe('929 USD'));
-  test('prev_max = 1298 USD',                 () => expect(s.prev_max).toBe('1298 USD'));
-  test('prev_min = 520 USD',                  () => expect(s.prev_min).toBe('520 USD'));
-  test('prev_qty = 14',                       () => expect(s.prev_qty).toBe('14'));
+  test('past_avg = 929 USD',                  () => expect(s.past_avg).toBe('929 USD'));
+  test('past_max = 1298 USD',                 () => expect(s.past_max).toBe('1298 USD'));
+  test('past_min = 520 USD',                  () => expect(s.past_min).toBe('520 USD'));
+  test('past_qty = 14',                       () => expect(s.past_qty).toBe('14'));
 
   // Last sale date formatted
-  test('prev_date contains February',         () => expect(s.prev_date).toContain('February'));
-  test('prev_date contains 8',                () => expect(s.prev_date).toContain('8'));
-  test('prev_date contains 2026',             () => expect(s.prev_date).toContain('2026'));
+  test('past_date contains February',         () => expect(s.past_date).toContain('February'));
+  test('past_date contains 8',                () => expect(s.past_date).toContain('8'));
+  test('past_date contains 2026',             () => expect(s.past_date).toContain('2026'));
 
   // Sale value: (1104 + 1498) / 2 = 1301
   test('saleValue = 1301 USD',               () => expect(s.saleValue).toBe('1301 USD'));
 
+  // Past sale value: (929 + 1298) / 2 = 1113.5 -> rounds to 1114 (round-half-up)
+  test('pastSaleValue = 1114 USD',           () => expect(s.pastSaleValue).toBe('1114 USD'));
+
   // Retail price: absent in fixture -> em dash
   test('retail_price_usd absent -> —',       () => expect(s.retail_price_usd).toBe('—'));
+
+  // With no retail price, gain/loss vs retail can't be computed
+  test('curVsRetailPct — when no retail price',  () => expect(s.curVsRetailPct).toBe('—'));
+  test('pastVsRetailPct — when no retail price', () => expect(s.pastVsRetailPct).toBe('—'));
 });
 
 
@@ -244,6 +252,122 @@ describe('normaliseSets — retail_price_usd', () => {
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// normaliseSets — % gain/loss vs retail price
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('normaliseSets — % gain/loss vs retail price', () => {
+  // Falcon: current avg/max 450/800 -> saleValue 625; past avg/max 400/750 -> pastSaleValue 575
+  const setWithRetail = (retail) => normaliseSets({
+    '75192-1': {
+      name: 'Falcon', category: 'Star Wars',
+      current: { avg: 450, max: 800, min: 350, quantity: 5, currency: 'USD' },
+      past:    { avg: 400, max: 750, min: 300, quantity: 12, currency: 'USD' },
+      year: 2017, retail_price_usd: retail,
+    },
+  })[0];
+
+  test('curVsRetailPct: saleValue above retail is a gain', () => {
+    // (625 - 500) / 500 * 100 = +25.0%
+    expect(setWithRetail(500).curVsRetailPct).toBe('+25.0%');
+  });
+
+  test('pastVsRetailPct: pastSaleValue below retail is a loss', () => {
+    // (575 - 850) / 850 * 100 ≈ -32.4%
+    expect(setWithRetail(850).pastVsRetailPct).toBe('-32.4%');
+  });
+
+  test('— when retail price is missing', () => {
+    const s = setWithRetail(null);
+    expect(s.curVsRetailPct).toBe('—');
+    expect(s.pastVsRetailPct).toBe('—');
+  });
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// pctChange / pctClass
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('pctChange', () => {
+  test('positive change gets a + sign',   () => expect(pctChange('150 USD', '100 USD')).toBe('+50.0%'));
+  test('negative change keeps - sign',    () => expect(pctChange('50 USD', '100 USD')).toBe('-50.0%'));
+  test('no change is 0.0% with no sign',  () => expect(pctChange('100 USD', '100 USD')).toBe('0.0%'));
+  test('— when base is zero',             () => expect(pctChange('100 USD', '0 USD')).toBe('—'));
+  test('— when new value missing',        () => expect(pctChange('', '100 USD')).toBe('—'));
+  test('— when base missing',             () => expect(pctChange('100 USD', '')).toBe('—'));
+  test('ignores currency, compares numbers only', () => expect(pctChange('200 GBP', '100 GBP')).toBe('+100.0%'));
+});
+
+describe('pctClass', () => {
+  test('gain for a + string',   () => expect(pctClass('+12.3%')).toBe('gain'));
+  test('loss for a - string',   () => expect(pctClass('-8.1%')).toBe('loss'));
+  test('neutral for 0.0%',      () => expect(pctClass('0.0%')).toBe(''));
+  test('empty for em dash',     () => expect(pctClass('—')).toBe(''));
+  test('empty for empty string',() => expect(pctClass('')).toBe(''));
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// showSetCards — file-mode summary bar gain/loss
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('showSetCards — summary bar totals', () => {
+  test('shows Sale Value totals (sum, not average), each % independently vs retail total', () => {
+    const sets = normaliseSets({
+      // saleValue = (100+200)/2 = 150, pastSaleValue = (50+100)/2 = 75
+      '1-1': { name: 'A', category: 'X', current: { avg: 100, max: 200, currency: 'USD' },
+                past: { avg: 50,  max: 100, currency: 'USD' }, year: 2020, retail_price_usd: 100 },
+      // saleValue = (300+400)/2 = 350, pastSaleValue = (150+200)/2 = 175
+      '2-1': { name: 'B', category: 'X', current: { avg: 300, max: 400, currency: 'USD' },
+                past: { avg: 150, max: 200, currency: 'USD' }, year: 2020, retail_price_usd: 200 },
+    });
+    showSetCards(sets, true, false);
+
+    // sum current sale value = 150+350=500, sum past sale value = 75+175=250, retail total = 300
+    // curVsRetail = (500-300)/300 = +66.7%; pastVsRetail = (250-300)/300 = -16.7% — independent of each other
+    expect(document.getElementById('summary-cur-total').textContent).toBe('500 USD');
+    expect(document.getElementById('summary-past-total').textContent).toBe('250 USD');
+    expect(document.getElementById('summary-cur-total-pct').textContent).toBe('(+66.7%)');
+    expect(document.getElementById('summary-cur-total-pct').className).toBe('summary-pct gain');
+    expect(document.getElementById('summary-past-total-pct').textContent).toBe('(-16.7%)');
+    expect(document.getElementById('summary-past-total-pct').className).toBe('summary-pct loss');
+  });
+
+  test('past total can gain vs retail even while current total loses vs retail', () => {
+    const sets = normaliseSets({
+      // saleValue = (50+100)/2 = 75, pastSaleValue = (100+200)/2 = 150
+      '1-1': { name: 'A', category: 'X', current: { avg: 50, max: 100, currency: 'USD' },
+                past: { avg: 100, max: 200, currency: 'USD' }, year: 2020, retail_price_usd: 100 },
+      '2-1': { name: 'B', category: 'X', current: { avg: 50, max: 100, currency: 'USD' },
+                past: { avg: 100, max: 200, currency: 'USD' }, year: 2020, retail_price_usd: 100 },
+    });
+    showSetCards(sets, true, false);
+
+    // sum current sale value = 150, sum past sale value = 300, retail total = 200
+    // curVsRetail = (150-200)/200 = -25.0%; pastVsRetail = (300-200)/200 = +50.0%
+    expect(document.getElementById('summary-cur-total').textContent).toBe('150 USD');
+    expect(document.getElementById('summary-past-total').textContent).toBe('300 USD');
+    expect(document.getElementById('summary-cur-total-pct').textContent).toBe('(-25.0%)');
+    expect(document.getElementById('summary-cur-total-pct').className).toBe('summary-pct loss');
+    expect(document.getElementById('summary-past-total-pct').textContent).toBe('(+50.0%)');
+    expect(document.getElementById('summary-past-total-pct').className).toBe('summary-pct gain');
+  });
+
+  test('empty parens and no class when retail price is missing', () => {
+    const sets = normaliseSets({
+      '1-1': { name: 'A', category: 'X', current: { avg: 100, max: 200, currency: 'USD' }, past: {}, year: 2020 },
+      '2-1': { name: 'B', category: 'X', current: { avg: 300, max: 400, currency: 'USD' }, past: {}, year: 2020 },
+    });
+    showSetCards(sets, true, false);
+
+    expect(document.getElementById('summary-cur-total-pct').textContent).toBe('');
+    expect(document.getElementById('summary-cur-total-pct').className).toBe('summary-pct ');
+    expect(document.getElementById('summary-past-total-pct').textContent).toBe('');
+  });
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // normaliseSets — multiple sets
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -262,7 +386,7 @@ describe('normaliseSets — multiple sets', () => {
 
   test('second set last sale date contains June', () => {
     const falcon = sets.find(s => s.number === '75192-1');
-    expect(falcon.prev_date).toContain('June');
+    expect(falcon.past_date).toContain('June');
   });
 });
 
@@ -290,13 +414,13 @@ describe('normaliseSets — edge cases', () => {
 
   test('missing past values → —', () => {
     const s = normaliseSets({ '1-1': { name: 'Test', category: 'X', current: {}, past: {}, year: 2020 } })[0];
-    expect(s.prev_avg).toBe('—');
-    expect(s.prev_date).toBe('—');
+    expect(s.past_avg).toBe('—');
+    expect(s.past_date).toBe('—');
   });
 
   test('missing last_sale_date → —',  () => {
     const s = normaliseSets(NO_PAST_MAP)[0];
-    expect(s.prev_date).toBe('—');
+    expect(s.past_date).toBe('—');
   });
 
   test('sale value — when current missing', () => {

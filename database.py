@@ -37,7 +37,34 @@ def init_db(db_path: str) -> None:
     _engine       = create_engine(f'sqlite:///{db_path}', future=True)
     _SessionLocal = sessionmaker(bind=_engine, expire_on_commit=False)
     Base.metadata.create_all(_engine)
+    _rename_legacy_columns(_engine)
     _add_missing_columns(_engine)
+
+
+# Columns renamed since release — old name -> new name, per table. Applied
+# before _add_missing_columns() so a rename doesn't get treated as "add a new
+# column" and silently drop the renamed column's existing data.
+_LEGACY_COLUMN_RENAMES = {
+    'set_prices': {
+        'prev_avg':             'past_avg',
+        'prev_max':             'past_max',
+        'prev_min':             'past_min',
+        'prev_qty':             'past_qty',
+        'prev_currency':        'past_currency',
+        'prev_last_sale_date':  'past_last_sale_date',
+    },
+}
+
+
+def _rename_legacy_columns(engine) -> None:
+    inspector = inspect(engine)
+
+    with engine.begin() as conn:
+        for table_name, renames in _LEGACY_COLUMN_RENAMES.items():
+            existing_columns = {col['name'] for col in inspector.get_columns(table_name)}
+            for old_name, new_name in renames.items():
+                if old_name in existing_columns and new_name not in existing_columns:
+                    conn.execute(text(f'ALTER TABLE {table_name} RENAME COLUMN {old_name} TO {new_name}'))
 
 
 def _add_missing_columns(engine) -> None:
@@ -125,7 +152,7 @@ def upsert_set(session, set_data: dict) -> Set:
 
     # Append a new price snapshot
     cur  = set_data.get('current', {})
-    prev = set_data.get('past',    {})
+    past = set_data.get('past',    {})
 
     price = SetPrice(
         retail_price_usd = set_data.get('retail_price_usd'),
@@ -136,12 +163,12 @@ def upsert_set(session, set_data: dict) -> Set:
         cur_qty      = cur.get('quantity'),
         cur_currency = cur.get('currency'),
 
-        prev_avg      = prev.get('avg'),
-        prev_max      = prev.get('max'),
-        prev_min      = prev.get('min'),
-        prev_qty      = prev.get('quantity'),
-        prev_currency = prev.get('currency'),
-        prev_last_sale_date = prev.get('last_sale_date'),
+        past_avg      = past.get('avg'),
+        past_max      = past.get('max'),
+        past_min      = past.get('min'),
+        past_qty      = past.get('quantity'),
+        past_currency = past.get('currency'),
+        past_last_sale_date = past.get('last_sale_date'),
     )
     row.prices.append(price)
     session.flush()  # populate row.id before upsert_inventory uses it
@@ -196,7 +223,7 @@ def set_to_dict(set_row: Set) -> dict:
         return f'{val} {currency}' if currency else str(val)
 
     cur_currency  = price.cur_currency  if price else None
-    prev_currency = price.prev_currency if price else None
+    past_currency = price.past_currency if price else None
 
     inv = set_row.inventory[0] if set_row.inventory else None
 
@@ -218,11 +245,11 @@ def set_to_dict(set_row: Set) -> dict:
             'currency': cur_currency,
         } if price else {},
         'past': {
-            'avg':            price.prev_avg            if price else None,
-            'max':            price.prev_max            if price else None,
-            'min':            price.prev_min            if price else None,
-            'quantity':       price.prev_qty            if price else None,
-            'currency':       prev_currency,
-            'last_sale_date': price.prev_last_sale_date if price else None,
+            'avg':            price.past_avg            if price else None,
+            'max':            price.past_max            if price else None,
+            'min':            price.past_min            if price else None,
+            'quantity':       price.past_qty            if price else None,
+            'currency':       past_currency,
+            'last_sale_date': price.past_last_sale_date if price else None,
         } if price else {},
     }
