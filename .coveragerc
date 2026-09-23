@@ -10,6 +10,7 @@ omit =
     generate_sheets.py
     inventory*.py
     bricklink_py*
+    db_summary.py
 
 [report]
 show_missing = True

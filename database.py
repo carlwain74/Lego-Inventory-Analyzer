@@ -13,7 +13,7 @@ import os
 from contextlib import contextmanager
 from datetime import datetime, timezone, timedelta
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker
 
 from models import Base, Set, SetPrice, Inventory
@@ -37,6 +37,26 @@ def init_db(db_path: str) -> None:
     _engine       = create_engine(f'sqlite:///{db_path}', future=True)
     _SessionLocal = sessionmaker(bind=_engine, expire_on_commit=False)
     Base.metadata.create_all(_engine)
+    _add_missing_columns(_engine)
+
+
+def _add_missing_columns(engine) -> None:
+    """
+    create_all() only creates missing tables, not missing columns on tables
+    that already exist — SQLite has no migration framework here, so a column
+    added to a model (e.g. SetPrice.retail_price_usd) silently vanishes for
+    anyone with a pre-existing db file until this runs an ALTER TABLE for it.
+    """
+    inspector = inspect(engine)
+
+    with engine.begin() as conn:
+        for table in Base.metadata.tables.values():
+            existing_columns = {col['name'] for col in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name in existing_columns:
+                    continue
+                ddl_type = column.type.compile(dialect=engine.dialect)
+                conn.execute(text(f'ALTER TABLE {table.name} ADD COLUMN {column.name} {ddl_type}'))
 
 
 @contextmanager

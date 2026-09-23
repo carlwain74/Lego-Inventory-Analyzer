@@ -67,6 +67,44 @@ class TestInitDb:
                 pass
         init_db(str(tmp_path / 'reinit.db'))
 
+    def test_adds_missing_column_to_pre_existing_table(self, tmp_path):
+        """
+        A db file created before `retail_price_usd` existed on SetPrice must
+        not break init_db — create_all() alone leaves the old table as-is,
+        so init_db must ALTER TABLE the missing column in.
+        """
+        import sqlite3
+
+        db_path = str(tmp_path / 'old_schema.db')
+        conn = sqlite3.connect(db_path)
+        conn.executescript('''
+            CREATE TABLE sets (
+                id INTEGER PRIMARY KEY, set_number VARCHAR NOT NULL UNIQUE, name VARCHAR,
+                category VARCHAR, year INTEGER, image TEXT, thumbnail TEXT, last_fetched DATETIME
+            );
+            CREATE TABLE set_prices (
+                id INTEGER PRIMARY KEY, set_id INTEGER NOT NULL, fetched_at DATETIME NOT NULL,
+                cur_avg INTEGER, cur_max INTEGER, cur_min INTEGER, cur_qty INTEGER, cur_currency VARCHAR,
+                prev_avg INTEGER, prev_max INTEGER, prev_min INTEGER, prev_qty INTEGER,
+                prev_currency VARCHAR, prev_last_sale_date VARCHAR
+            );
+            CREATE TABLE inventory (
+                id INTEGER PRIMARY KEY, set_id INTEGER NOT NULL, quantity INTEGER NOT NULL,
+                added_at DATETIME NOT NULL, updated_at DATETIME NOT NULL
+            );
+            INSERT INTO sets (set_number, name) VALUES ('75192-1', 'Millennium Falcon');
+            INSERT INTO set_prices (set_id, fetched_at, cur_avg) VALUES (1, '2024-01-01 00:00:00', 450);
+        ''')
+        conn.commit()
+        conn.close()
+
+        init_db(db_path)  # re-init against the old-schema file — must not raise
+
+        with get_session() as s:
+            row = s.query(Set).filter_by(set_number='75192-1').first()
+            assert row.latest_price.retail_price_usd is None
+            assert row.latest_price.cur_avg == 450
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # get_session
